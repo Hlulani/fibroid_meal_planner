@@ -18,6 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+
 # =========================
 # GLOBAL STATE
 # =========================
@@ -25,9 +26,15 @@ st.set_page_config(
 if "plan_data" not in st.session_state:
     st.session_state["plan_data"] = None
 
-# Current tab from URL query
-params = st.query_params
-current_tab = params.get("tab") or "home"  # "home", "plan", "recipes"
+# Get current tab from query params (can be list or str)
+raw_tab = st.query_params.get("tab", "home")
+if isinstance(raw_tab, list):
+    current_tab = raw_tab[0] if raw_tab else "home"
+else:
+    current_tab = raw_tab or "home"
+
+if current_tab not in {"home", "plan", "recipes"}:
+    current_tab = "home"
 
 
 # =========================
@@ -35,111 +42,115 @@ current_tab = params.get("tab") or "home"  # "home", "plan", "recipes"
 # =========================
 
 st.markdown(
-    f"""
+    """
     <style>
     /* Background + general layout */
-    [data-testid="stAppViewContainer"] {{
-        background: linear-gradient(180deg, #fff6f1 0%, #ffffff 40%);
+    [data-testid="stAppViewContainer"] {
+        background: linear-gradient(180deg, #f5f2e9 0%, #ffffff 40%);
         padding-top: 0.5rem;
         padding-bottom: 4rem; /* space for bottom nav */
-    }}
+    }
 
-    .main-block {{
+    .main-block {
         max-width: 860px;
         margin: 0 auto;
-    }}
+    }
 
-    /* Hero card */
-    .hero-card {{
-        background: linear-gradient(135deg, #ffd9c2, #ffe8df);
+    /* Hero card - deep green */
+    .hero-card {
+        background: linear-gradient(135deg, #446c4a, #31523a);
         padding: 18px 16px;
         border-radius: 22px;
         margin: 10px 0 18px 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }}
-    .hero-title {{
+        box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+        color: #fdfaf4;
+    }
+    .hero-title {
         font-size: 22px;
         font-weight: 700;
         margin-bottom: 4px;
-        color: #5b320a;
-    }}
-    .hero-sub {{
+        color: #fdfaf4;
+    }
+    .hero-sub {
         font-size: 14px;
-        color: #6f4b2a;
-    }}
+        color: #e2e0d8;
+    }
 
-    /* Category chips */
-    .chip-row {{
+    /* Category chips - soft sage */
+    .chip-row {
         display: flex;
         gap: 8px;
         overflow-x: auto;
         padding-bottom: 4px;
         margin-bottom: 10px;
-    }}
-    .chip {{
+    }
+    .chip {
         flex: 0 0 auto;
-        background: #fff4e6;
-        border: 1px solid #ffe3c2;
+        background: #e4efe6;
+        border: 1px solid #c5ddcd;
         padding: 6px 12px;
         border-radius: 999px;
         font-size: 12px;
-        color: #c46f00;
+        color: #355b3f;
         white-space: nowrap;
-    }}
+    }
 
-    /* Meal cards */
-    .meal-card {{
+    /* Meal cards - subtle green border */
+    .meal-card {
         border-radius: 18px;
         padding: 14px 14px 10px 14px;
-        margin-bottom: 14px;
+        margin-bottom: 8px;
         background: #ffffff;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }}
-    .meal-header-line {{
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        border: 1px solid #e0eadf;
+    }
+    .meal-header-line {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 2px;
-    }}
-    .meal-name {{
+    }
+    .meal-name {
         font-weight: 600;
         font-size: 15px;
-    }}
-    .meal-heart {{
+        color: #294534;
+    }
+    .meal-heart {
         font-size: 14px;
-        color: #ff6b6b;
-    }}
-    .meal-meta {{
+        color: #f4976c;
+    }
+    .meal-meta {
         font-size: 12px;
-        color: #888;
+        color: #6b7b6f;
         margin-bottom: 4px;
-    }}
-    .meal-tags {{
+    }
+    .meal-tags {
         font-size: 11px;
-        color: #aaa;
-    }}
+        color: #9aa99b;
+    }
 
-    .day-header {{
+    .day-header {
         margin-top: 1.1rem;
         margin-bottom: 0.4rem;
         font-size: 1.0rem;
         font-weight: 700;
-    }}
+        color: #2d4736;
+    }
 
-    /* Bottom navigation bar */
-    .bottom-nav {{
+    /* Bottom navigation bar - aligned with green theme */
+    .bottom-nav {
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        background: #ffffff;
-        border-top: 1px solid #eee;
+        background: #314a38;  /* deep green bar */
+        border-top: 1px solid #1f3124;
         display: flex;
         justify-content: space-around;
-        padding: 5px 0 6px 0;
+        padding: 6px 10px 10px 10px;
         z-index: 9999;
-    }}
-    .nav-item {{
+    }
+    .nav-item {
         flex: 1;
         border: none;
         background: transparent;
@@ -147,34 +158,37 @@ st.markdown(
         flex-direction: column;
         align-items: center;
         font-size: 11px;
-        color: #999;
+        color: #d8e5db;  /* muted light green */
         padding: 4px 0;
-    }}
-    .nav-icon {{
+        border-radius: 999px;
+        margin: 0 4px;
+    }
+    .nav-icon {
         font-size: 18px;
         margin-bottom: 1px;
-    }}
-    .nav-item.active {{
-        color: #ff6b6b;
+    }
+    .nav-item.active {
+        color: #314a38;          /* dark green text/icons */
+        background: #e4efe6;     /* soft sage pill */
         font-weight: 600;
-    }}
+    }
 
-    @media (max-width: 768px) {{
-        h1 {{
+    @media (max-width: 768px) {
+        h1 {
             font-size: 1.6rem !important;
-        }}
-        .hero-title {{
+        }
+        .hero-title {
             font-size: 20px;
-        }}
-    }}
+        }
+    }
     </style>
 
     <script>
-    function switchTab(tabName) {{
-      const url = new URL(window.location);
+    function switchTab(tabName) {
+      const url = new URL(window.location.href);
       url.searchParams.set('tab', tabName);
       window.location.href = url.toString();
-    }}
+    }
     </script>
     """,
     unsafe_allow_html=True,
@@ -192,8 +206,10 @@ def render_home() -> None:
     st.markdown(
         """
         <div style="padding: 10px 0 4px 0; text-align:left;">
-            <div style="font-size:13px; color:#777;">Good to see you 🌿</div>
-            <h2 style="margin: 0; font-size:24px;">What nourishment shall we choose today?</h2>
+            <div style="font-size:13px; color:#6c7a6e;">Good to see you 🌿</div>
+            <h2 style="margin: 0; font-size:24px; color:#263a2d;">
+                What nourishment shall we choose today?
+            </h2>
         </div>
         """,
         unsafe_allow_html=True,
@@ -213,8 +229,8 @@ def render_home() -> None:
         unsafe_allow_html=True,
     )
 
-    # "Search" bar (visual, placeholder for future)
-    search = st.text_input(
+    # Search bar (visual only for now)
+    _ = st.text_input(
         "Search recipes",
         "",
         placeholder="Search a meal or ingredient (coming soon)…",
@@ -224,7 +240,7 @@ def render_home() -> None:
     # Category chips
     st.markdown(
         """
-        <div style="margin-top:2px; margin-bottom:4px; font-size:13px; color:#555;">
+        <div style="margin-top:2px; margin-bottom:4px; font-size:13px; color:#506254;">
             Focus for today
         </div>
         <div class="chip-row">
@@ -238,7 +254,7 @@ def render_home() -> None:
         unsafe_allow_html=True,
     )
 
-    # CTA button
+    # CTA button → switch to plan tab
     if st.button("✨ Build My Meal Plan", use_container_width=True):
         st.query_params["tab"] = "plan"
         st.rerun()
@@ -267,6 +283,22 @@ def render_home() -> None:
             unsafe_allow_html=True,
         )
 
+        with st.expander("👩‍🍳 See full recipe"):
+            if meal.ingredients:
+                st.markdown("**Ingredients**")
+                for ing in meal.ingredients:
+                    amount = ing.get("amount", "").strip()
+                    item = ing.get("item", "").strip()
+                    if amount:
+                        st.markdown(f"- {amount} {item}")
+                    else:
+                        st.markdown(f"- {item}")
+
+            if meal.instructions:
+                st.markdown("**Step-by-step**")
+                for idx, step in enumerate(meal.instructions, start=1):
+                    st.markdown(f"{idx}. {step}")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -276,8 +308,8 @@ def render_plan() -> None:
     st.markdown(
         """
         <div style="padding: 10px 0 4px 0; text-align:left;">
-            <h2 style="margin: 0; font-size:24px;">Your healing plan</h2>
-            <div style="font-size:13px; color:#777;">
+            <h2 style="margin: 0; font-size:24px; color:#263a2d;">Your healing plan</h2>
+            <div style="font-size:13px; color:#6c7a6e;">
                 Tell me how you like to eat and I’ll build a fibroid-supportive plan for you.
             </div>
         </div>
@@ -364,11 +396,27 @@ def render_plan() -> None:
                     """,
                     unsafe_allow_html=True,
                 )
+
+                with st.expander("👩‍🍳 See full recipe"):
+                    if meal.ingredients:
+                        st.markdown("**Ingredients**")
+                        for ing in meal.ingredients:
+                            amount = ing.get("amount", "").strip()
+                            item = ing.get("item", "").strip()
+                            if amount:
+                                st.markdown(f"- {amount} {item}")
+                            else:
+                                st.markdown(f"- {item}")
+
+                    if meal.instructions:
+                        st.markdown("**Step-by-step**")
+                        for idx, step in enumerate(meal.instructions, start=1):
+                            st.markdown(f"{idx}. {step}")
     else:
         st.markdown("### 🌞 Today’s meals")
         st.write("Your plan doesn’t start today, but you can still view all days below.")
 
-    # Full plan
+    # Full plan (all days)
     with st.expander("📅 View full plan (all days)"):
         for day_plan in plan:
             st.markdown(
@@ -404,6 +452,22 @@ def render_plan() -> None:
                     unsafe_allow_html=True,
                 )
 
+                with st.expander("👩‍🍳 See full recipe"):
+                    if meal.ingredients:
+                        st.markdown("**Ingredients**")
+                        for ing in meal.ingredients:
+                            amount = ing.get("amount", "").strip()
+                            item = ing.get("item", "").strip()
+                            if amount:
+                                st.markdown(f"- {amount} {item}")
+                            else:
+                                st.markdown(f"- {item}")
+
+                    if meal.instructions:
+                        st.markdown("**Step-by-step**")
+                        for idx, step in enumerate(meal.instructions, start=1):
+                            st.markdown(f"{idx}. {step}")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -413,8 +477,8 @@ def render_recipes() -> None:
     st.markdown(
         """
         <div style="padding: 10px 0 4px 0; text-align:left;">
-            <h2 style="margin: 0; font-size:24px;">All recipes</h2>
-            <div style="font-size:13px; color:#777;">
+            <h2 style="margin: 0; font-size:24px; color:#263a2d;">All recipes</h2>
+            <div style="font-size:13px; color:#6c7a6e;">
                 Browse each meal and see ingredients and step-by-step instructions.
             </div>
         </div>
@@ -459,7 +523,6 @@ def render_recipes() -> None:
             unsafe_allow_html=True,
         )
 
-        # Recipe details
         with st.expander("👩‍🍳 See full recipe"):
             if meal.ingredients:
                 st.markdown("**Ingredients**")
@@ -490,7 +553,7 @@ elif current_tab == "plan":
 elif current_tab == "recipes":
     render_recipes()
 else:
-    render_home()  # fallback
+    render_home()
 
 
 # =========================
@@ -519,6 +582,7 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
 
 #
 # import streamlit as st
