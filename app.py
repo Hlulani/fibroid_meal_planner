@@ -1,10 +1,11 @@
 from datetime import date
 import random
+from typing import List
 
 import streamlit as st
 
 from planner import FASTING_CONFIGS, generate_meal_plan
-from meals import MEALS
+from meals import MEALS, FERMENTED_RECIPES
 
 
 # =========================
@@ -26,7 +27,7 @@ st.set_page_config(
 if "plan_data" not in st.session_state:
     st.session_state["plan_data"] = None
 
-# Get current tab from query params (can be list or str)
+# Determine current tab from query params (?tab=home|plan|recipes)
 raw_tab = st.query_params.get("tab", "home")
 if isinstance(raw_tab, list):
     current_tab = raw_tab[0] if raw_tab else "home"
@@ -38,7 +39,7 @@ if current_tab not in {"home", "plan", "recipes"}:
 
 
 # =========================
-# GLOBAL CSS + NAV JS
+# GLOBAL CSS
 # =========================
 
 st.markdown(
@@ -137,61 +138,62 @@ st.markdown(
         color: #2d4736;
     }
 
-    /* Bottom navigation bar - aligned with green theme */
+    /* Bottom navigation bar */
     .bottom-nav {
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        background: #314a38;  /* deep green bar */
+        background: #314a38;  /* deep green */
         border-top: 1px solid #1f3124;
         display: flex;
         justify-content: space-around;
         padding: 6px 10px 10px 10px;
         z-index: 9999;
     }
+
     .nav-item {
-    flex: 1;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    padding: 6px 0;
-    border-radius: 999px;
-    margin: 0 4px;
-    cursor: pointer;
-
-    /* remove link styling */
-    text-decoration: none;
-    color: #e6f0e7 !important;
-}
-
-/* active pill */
-.nav-item.active {
-    background: #e4efe6;  /* soft sage */
-    color: #314a38 !important; /* dark green text */
-    font-weight: 600;
-}
-
-/* ensure icons and text adopt the correct theme */
-.nav-item span {
-    text-decoration: none !important;
-    color: inherit !important;
-}
-
-
+        flex: 1;
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        padding: 6px 0;
+        border-radius: 999px;
+        margin: 0 4px;
+        cursor: pointer;
+        text-decoration: none;
+    }
 
     .nav-icon {
         font-size: 18px;
         margin-bottom: 1px;
     }
-    # .nav-item.active {
-    #     color: #314a38;          /* dark green text/icons */
-    #     background: #e4efe6;     /* soft sage pill */
-    #     font-weight: 600;
-    # }
+
+    /* default (inactive) link look */
+    a.nav-item,
+    a.nav-item:link,
+    a.nav-item:visited {
+        color: #d8e5db;
+        text-decoration: none;
+    }
+
+    /* active pill */
+    a.nav-item.active,
+    a.nav-item.active:link,
+    a.nav-item.active:visited {
+        background: #e4efe6;     /* soft sage pill */
+        color: #314a38;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    a.nav-item span {
+        color: inherit;
+        text-decoration: none;
+    }
 
     @media (max-width: 768px) {
         h1 {
@@ -202,8 +204,6 @@ st.markdown(
         }
     }
     </style>
-
- 
     """,
     unsafe_allow_html=True,
 )
@@ -243,7 +243,7 @@ def render_home() -> None:
         unsafe_allow_html=True,
     )
 
-    # Search bar (visual only for now)
+    # Search bar (visual only)
     _ = st.text_input(
         "Search recipes",
         "",
@@ -491,67 +491,118 @@ def render_recipes() -> None:
     st.markdown(
         """
         <div style="padding: 10px 0 4px 0; text-align:left;">
-            <h2 style="margin: 0; font-size:24px; color:#263a2d;">All recipes</h2>
+            <h2 style="margin: 0; font-size:24px; color:#263a2d;">Recipes</h2>
             <div style="font-size:13px; color:#6c7a6e;">
-                Browse each meal and see ingredients and step-by-step instructions.
+                Browse anti-inflammatory meals or fermented add-ons to boost your gut and hormones.
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    col1, col2 = st.columns([2, 1])
-    meal_type_filter = col1.selectbox(
-        "Meal type",
-        ["All", "Breakfast", "Lunch", "Dinner", "Snack"],
-    )
-    tag_filter = col2.selectbox(
-        "Focus",
-        ["Any", "anti_inflammatory", "fibroid_friendly", "high_fiber", "iron_rich"],
+    mode = st.radio(
+        "What would you like to explore?",
+        options=["Meals", "Fermented add-ons"],
+        horizontal=True,
     )
 
-    for meal in MEALS:
-        if meal_type_filter != "All" and meal.meal_type.lower() != meal_type_filter.lower():
-            continue
-        if tag_filter != "Any" and tag_filter not in meal.tags:
-            continue
-
-        tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
-
-        st.markdown(
-            f"""
-            <div class="meal-card">
-                <div class="meal-header-line">
-                    <div class="meal-name">{meal.name}</div>
-                    <div class="meal-heart">👩‍🍳</div>
-                </div>
-                <div class="meal-meta">
-                    {meal.meal_type.title()} · 🌿 Anti-inflammatory: {meal.anti_inflammatory_score}/5
-                    · 💪 Iron: {meal.iron_support}/5
-                </div>
-                <div class="meal-tags">
-                    Tags: {tags_display}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+    if mode == "Meals":
+        col1, col2 = st.columns([2, 1])
+        meal_type_filter = col1.selectbox(
+            "Meal type",
+            ["All", "Breakfast", "Lunch", "Dinner", "Snack"],
+        )
+        tag_filter = col2.selectbox(
+            "Focus",
+            ["Any", "anti_inflammatory", "fibroid_friendly", "high_fiber", "iron_rich"],
         )
 
-        with st.expander("👩‍🍳 See full recipe"):
-            if meal.ingredients:
-                st.markdown("**Ingredients**")
-                for ing in meal.ingredients:
-                    amount = ing.get("amount", "").strip()
-                    item = ing.get("item", "").strip()
-                    if amount:
-                        st.markdown(f"- {amount} {item}")
-                    else:
-                        st.markdown(f"- {item}")
+        for meal in MEALS:
+            if meal_type_filter != "All" and meal.meal_type.lower() != meal_type_filter.lower():
+                continue
+            if tag_filter != "Any" and tag_filter not in meal.tags:
+                continue
 
-            if meal.instructions:
-                st.markdown("**Step-by-step**")
-                for idx, step in enumerate(meal.instructions, start=1):
-                    st.markdown(f"{idx}. {step}")
+            tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
+
+            st.markdown(
+                f"""
+                <div class="meal-card">
+                    <div class="meal-header-line">
+                        <div class="meal-name">{meal.name}</div>
+                        <div class="meal-heart">👩‍🍳</div>
+                    </div>
+                    <div class="meal-meta">
+                        {meal.meal_type.title()} · 🌿 Anti-inflammatory: {meal.anti_inflammatory_score}/5
+                        · 💪 Iron: {meal.iron_support}/5
+                    </div>
+                    <div class="meal-tags">
+                        Tags: {tags_display}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            with st.expander("👩‍🍳 See full recipe"):
+                if meal.ingredients:
+                    st.markdown("**Ingredients**")
+                    for ing in meal.ingredients:
+                        amount = ing.get("amount", "").strip()
+                        item = ing.get("item", "").strip()
+                        if amount:
+                            st.markdown(f"- {amount} {item}")
+                        else:
+                            st.markdown(f"- {item}")
+
+                if meal.instructions:
+                    st.markdown("**Step-by-step**")
+                    for idx, step in enumerate(meal.instructions, start=1):
+                        st.markdown(f"{idx}. {step}")
+    else:
+        st.subheader("Fermented add-ons")
+        st.caption(
+            "These are small ferments you can prepare ahead and add to meals for extra fibre, "
+            "beneficial bacteria and flavour."
+        )
+
+        for fr in FERMENTED_RECIPES:
+            st.markdown(
+                f"""
+                <div class="meal-card">
+                    <div class="meal-header-line">
+                        <div class="meal-name">{fr.name}</div>
+                        <div class="meal-heart">🧪</div>
+                    </div>
+                    <div class="meal-meta">
+                        Ferment · ⏱ At least {fr.min_days} days
+                        {" · " + str(fr.brine_percent) + "% brine" if fr.brine_percent is not None else ""}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            with st.expander("👩‍🍳 See full recipe"):
+                # short description if you want one later
+                if getattr(fr, "notes", None):
+                    st.markdown(fr.notes)
+
+                if getattr(fr, "ingredients", None):
+                    st.markdown("**Ingredients**")
+                    for line in fr.ingredients:
+                        st.markdown(f"- {line}")
+
+                if getattr(fr, "steps", None):
+                    st.markdown("**How to make it**")
+                    for idx, step in enumerate(fr.steps, start=1):
+                        st.markdown(f"{idx}. {step}")
+
+                # Explicit fermentation info line
+                st.markdown(
+                    f"**Fermentation time**: at least {fr.min_days} days."
+                )
+
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -599,6 +650,605 @@ st.markdown(
 )
 
 
+
+
+
+# from datetime import date
+# import random
+#
+# import streamlit as st
+#
+# from planner import FASTING_CONFIGS, generate_meal_plan
+# from meals import MEALS
+#
+#
+# # =========================
+# # PAGE CONFIG
+# # =========================
+#
+# st.set_page_config(
+#     page_title="Fibroid-Friendly Meal Planner",
+#     page_icon="🧡",
+#     layout="centered",
+#     initial_sidebar_state="collapsed",
+# )
+#
+#
+# # =========================
+# # GLOBAL STATE
+# # =========================
+#
+# if "plan_data" not in st.session_state:
+#     st.session_state["plan_data"] = None
+#
+# # Get current tab from query params (can be list or str)
+# raw_tab = st.query_params.get("tab", "home")
+# if isinstance(raw_tab, list):
+#     current_tab = raw_tab[0] if raw_tab else "home"
+# else:
+#     current_tab = raw_tab or "home"
+#
+# if current_tab not in {"home", "plan", "recipes"}:
+#     current_tab = "home"
+#
+#
+# # =========================
+# # GLOBAL CSS + NAV JS
+# # =========================
+#
+# st.markdown(
+#     """
+#     <style>
+#     /* Background + general layout */
+#     [data-testid="stAppViewContainer"] {
+#         background: linear-gradient(180deg, #f5f2e9 0%, #ffffff 40%);
+#         padding-top: 0.5rem;
+#         padding-bottom: 4rem; /* space for bottom nav */
+#     }
+#
+#     .main-block {
+#         max-width: 860px;
+#         margin: 0 auto;
+#     }
+#
+#     /* Hero card - deep green */
+#     .hero-card {
+#         background: linear-gradient(135deg, #446c4a, #31523a);
+#         padding: 18px 16px;
+#         border-radius: 22px;
+#         margin: 10px 0 18px 0;
+#         box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+#         color: #fdfaf4;
+#     }
+#     .hero-title {
+#         font-size: 22px;
+#         font-weight: 700;
+#         margin-bottom: 4px;
+#         color: #fdfaf4;
+#     }
+#     .hero-sub {
+#         font-size: 14px;
+#         color: #e2e0d8;
+#     }
+#
+#     /* Category chips - soft sage */
+#     .chip-row {
+#         display: flex;
+#         gap: 8px;
+#         overflow-x: auto;
+#         padding-bottom: 4px;
+#         margin-bottom: 10px;
+#     }
+#     .chip {
+#         flex: 0 0 auto;
+#         background: #e4efe6;
+#         border: 1px solid #c5ddcd;
+#         padding: 6px 12px;
+#         border-radius: 999px;
+#         font-size: 12px;
+#         color: #355b3f;
+#         white-space: nowrap;
+#     }
+#
+#     /* Meal cards - subtle green border */
+#     .meal-card {
+#         border-radius: 18px;
+#         padding: 14px 14px 10px 14px;
+#         margin-bottom: 8px;
+#         background: #ffffff;
+#         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+#         border: 1px solid #e0eadf;
+#     }
+#     .meal-header-line {
+#         display: flex;
+#         justify-content: space-between;
+#         align-items: center;
+#         margin-bottom: 2px;
+#     }
+#     .meal-name {
+#         font-weight: 600;
+#         font-size: 15px;
+#         color: #294534;
+#     }
+#     .meal-heart {
+#         font-size: 14px;
+#         color: #f4976c;
+#     }
+#     .meal-meta {
+#         font-size: 12px;
+#         color: #6b7b6f;
+#         margin-bottom: 4px;
+#     }
+#     .meal-tags {
+#         font-size: 11px;
+#         color: #9aa99b;
+#     }
+#
+#     .day-header {
+#         margin-top: 1.1rem;
+#         margin-bottom: 0.4rem;
+#         font-size: 1.0rem;
+#         font-weight: 700;
+#         color: #2d4736;
+#     }
+#
+#     /* Bottom navigation bar - aligned with green theme */
+#     .bottom-nav {
+#         position: fixed;
+#         bottom: 0;
+#         left: 0;
+#         right: 0;
+#         background: #314a38;  /* deep green bar */
+#         border-top: 1px solid #1f3124;
+#         display: flex;
+#         justify-content: space-around;
+#         padding: 6px 10px 10px 10px;
+#         z-index: 9999;
+#     }
+#     .nav-item {
+#     flex: 1;
+#     background: transparent;
+#     display: flex;
+#     flex-direction: column;
+#     align-items: center;
+#     justify-content: center;
+#     font-size: 11px;
+#     padding: 6px 0;
+#     border-radius: 999px;
+#     margin: 0 4px;
+#     cursor: pointer;
+#
+#     /* remove link styling */
+#     text-decoration: none;
+#     color: #e6f0e7 !important;
+# }
+#
+# /* active pill */
+# .nav-item.active {
+#     background: #e4efe6;  /* soft sage */
+#     color: #314a38 !important; /* dark green text */
+#     font-weight: 600;
+# }
+#
+# /* ensure icons and text adopt the correct theme */
+# .nav-item span {
+#     text-decoration: none !important;
+#     color: inherit !important;
+# }
+#
+#
+#
+#     .nav-icon {
+#         font-size: 18px;
+#         margin-bottom: 1px;
+#     }
+#
+#     @media (max-width: 768px) {
+#         h1 {
+#             font-size: 1.6rem !important;
+#         }
+#         .hero-title {
+#             font-size: 20px;
+#         }
+#     }
+#     </style>
+#
+#
+#     """,
+#     unsafe_allow_html=True,
+# )
+#
+#
+# # =========================
+# # PAGE RENDERERS
+# # =========================
+#
+# def render_home() -> None:
+#     st.markdown('<div class="main-block">', unsafe_allow_html=True)
+#
+#     # Greeting section
+#     st.markdown(
+#         """
+#         <div style="padding: 10px 0 4px 0; text-align:left;">
+#             <div style="font-size:13px; color:#6c7a6e;">Good to see you 🌿</div>
+#             <h2 style="margin: 0; font-size:24px; color:#263a2d;">
+#                 What nourishment shall we choose today?
+#             </h2>
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+#
+#     # Hero card
+#     st.markdown(
+#         """
+#         <div class="hero-card">
+#             <div class="hero-title">Fibroid-friendly, anti-inflammatory meals</div>
+#             <div class="hero-sub">
+#                 Gentle, supportive recipes designed around fasting windows,
+#                 hormones and digestion.
+#             </div>
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+#
+#     # Search bar (visual only for now)
+#     _ = st.text_input(
+#         "Search recipes",
+#         "",
+#         placeholder="Search a meal or ingredient (coming soon)…",
+#         label_visibility="collapsed",
+#     )
+#
+#     # Category chips
+#     st.markdown(
+#         """
+#         <div style="margin-top:2px; margin-bottom:4px; font-size:13px; color:#506254;">
+#             Focus for today
+#         </div>
+#         <div class="chip-row">
+#             <div class="chip">Hormone support</div>
+#             <div class="chip">Low inflammation</div>
+#             <div class="chip">Gut reset</div>
+#             <div class="chip">Iron support</div>
+#             <div class="chip">Energy boost</div>
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+#
+#     # CTA button → switch to plan tab
+#     if st.button("✨ Build My Meal Plan", use_container_width=True):
+#         st.query_params["tab"] = "plan"
+#         st.rerun()
+#
+#     # Recommendations (sample 2 meals)
+#     st.markdown("### Recommended for you today")
+#
+#     sample_meals = random.sample(MEALS, k=min(2, len(MEALS)))
+#     for meal in sample_meals:
+#         tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
+#         st.markdown(
+#             f"""
+#             <div class="meal-card">
+#                 <div class="meal-header-line">
+#                     <div class="meal-name">{meal.name}</div>
+#                     <div class="meal-heart">💛</div>
+#                 </div>
+#                 <div class="meal-meta">
+#                     {meal.meal_type.title()} · 🌿 Anti-inflammatory score: {meal.anti_inflammatory_score}
+#                 </div>
+#                 <div class="meal-tags">
+#                     Tags: {tags_display}
+#                 </div>
+#             </div>
+#             """,
+#             unsafe_allow_html=True,
+#         )
+#
+#         with st.expander("👩‍🍳 See full recipe"):
+#             if meal.ingredients:
+#                 st.markdown("**Ingredients**")
+#                 for ing in meal.ingredients:
+#                     amount = ing.get("amount", "").strip()
+#                     item = ing.get("item", "").strip()
+#                     if amount:
+#                         st.markdown(f"- {amount} {item}")
+#                     else:
+#                         st.markdown(f"- {item}")
+#
+#             if meal.instructions:
+#                 st.markdown("**Step-by-step**")
+#                 for idx, step in enumerate(meal.instructions, start=1):
+#                     st.markdown(f"{idx}. {step}")
+#
+#     st.markdown("</div>", unsafe_allow_html=True)
+#
+#
+# def render_plan() -> None:
+#     st.markdown('<div class="main-block">', unsafe_allow_html=True)
+#
+#     st.markdown(
+#         """
+#         <div style="padding: 10px 0 4px 0; text-align:left;">
+#             <h2 style="margin: 0; font-size:24px; color:#263a2d;">Your healing plan</h2>
+#             <div style="font-size:13px; color:#6c7a6e;">
+#                 Tell me how you like to eat and I’ll build a fibroid-supportive plan for you.
+#             </div>
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+#
+#     with st.expander("✨ Personalise My Plan", expanded=True):
+#         st.markdown(
+#             "Answer these quickly so I can create meals that support your hormones, "
+#             "digestion and inflammation 💛"
+#         )
+#
+#         st.subheader("🕒 Eating style")
+#         pattern_ids = list(FASTING_CONFIGS.keys())
+#         selected_pattern_id = st.selectbox(
+#             "Fasting style",
+#             options=pattern_ids,
+#             format_func=lambda pid: FASTING_CONFIGS[pid].label,
+#         )
+#
+#         eat_window_start_hour = st.slider(
+#             "When do you like your first meal?",
+#             min_value=8,
+#             max_value=14,
+#             value=12,
+#         )
+#
+#         st.caption(FASTING_CONFIGS[selected_pattern_id].description)
+#
+#         st.subheader("🎯 Focus areas")
+#         fibroid_focus = st.checkbox("Support fibroids with fibre & cruciferous veggies", value=True)
+#         anemia_risk = st.checkbox("Support iron levels (for heavy periods / low iron)", value=True)
+#
+#         st.subheader("📆 Plan duration")
+#         days = st.slider("How many days should I plan for?", 7, 30, 30)
+#
+#         if st.button("✨ Generate My Healing Plan", use_container_width=True):
+#             plan = generate_meal_plan(
+#                 days=days,
+#                 fasting_pattern_id=selected_pattern_id,
+#                 eat_window_start_hour=eat_window_start_hour,
+#                 fibroid_focus=fibroid_focus,
+#                 anemia_risk=anemia_risk,
+#             )
+#             st.session_state["plan_data"] = plan
+#             st.success("New plan created. Scroll down to see it 💚")
+#
+#     plan = st.session_state.get("plan_data")
+#
+#     if not plan:
+#         st.info("Once you generate a plan, your meals will appear here.")
+#         st.markdown("</div>", unsafe_allow_html=True)
+#         return
+#
+#     # Today's plan
+#     today = date.today()
+#     today_plan = next((p for p in plan if p.day == today), None)
+#
+#     if today_plan:
+#         st.markdown("### 🌞 Today’s meals")
+#         if not today_plan.meals:
+#             st.write("No meals for today with the current filters.")
+#         else:
+#             for slot in today_plan.meals:
+#                 meal = slot.meal
+#                 tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
+#                 st.markdown(
+#                     f"""
+#                     <div class="meal-card">
+#                         <div class="meal-header-line">
+#                             <div class="meal-name">{slot.time_str} · {meal.name}</div>
+#                             <div class="meal-heart">🌿</div>
+#                         </div>
+#                         <div class="meal-meta">
+#                             {meal.meal_type.title()} · 🕑 {slot.time_str} ·
+#                             💪 Iron: {meal.iron_support}/5 ·
+#                             🌾 Fibre: {meal.fiber_score}/5
+#                         </div>
+#                         <div class="meal-tags">
+#                             Tags: {tags_display}
+#                         </div>
+#                     </div>
+#                     """,
+#                     unsafe_allow_html=True,
+#                 )
+#
+#                 with st.expander("👩‍🍳 See full recipe"):
+#                     if meal.ingredients:
+#                         st.markdown("**Ingredients**")
+#                         for ing in meal.ingredients:
+#                             amount = ing.get("amount", "").strip()
+#                             item = ing.get("item", "").strip()
+#                             if amount:
+#                                 st.markdown(f"- {amount} {item}")
+#                             else:
+#                                 st.markdown(f"- {item}")
+#
+#                     if meal.instructions:
+#                         st.markdown("**Step-by-step**")
+#                         for idx, step in enumerate(meal.instructions, start=1):
+#                             st.markdown(f"{idx}. {step}")
+#     else:
+#         st.markdown("### 🌞 Today’s meals")
+#         st.write("Your plan doesn’t start today, but you can still view all days below.")
+#
+#     # Full plan (all days)
+#     with st.expander("📅 View full plan (all days)"):
+#         for day_plan in plan:
+#             st.markdown(
+#                 f'<div class="day-header">📆 {day_plan.day.isoformat()}</div>',
+#                 unsafe_allow_html=True,
+#             )
+#             if not day_plan.meals:
+#                 st.write("No meals for this day.")
+#                 continue
+#
+#             for slot in day_plan.meals:
+#                 meal = slot.meal
+#                 tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
+#
+#                 st.markdown(
+#                     f"""
+#                     <div class="meal-card">
+#                         <div class="meal-header-line">
+#                             <div class="meal-name">{slot.time_str} · {meal.name}</div>
+#                             <div class="meal-heart">💚</div>
+#                         </div>
+#                         <div class="meal-meta">
+#                             {meal.meal_type.title()} · 🕑 {slot.time_str} ·
+#                             🌿 Anti-inflammatory: {meal.anti_inflammatory_score}/5 ·
+#                             💪 Iron: {meal.iron_support}/5 ·
+#                             🌾 Fibre: {meal.fiber_score}/5
+#                         </div>
+#                         <div class="meal-tags">
+#                             Tags: {tags_display}
+#                         </div>
+#                     </div>
+#                     """,
+#                     unsafe_allow_html=True,
+#                 )
+#
+#                 with st.expander("👩‍🍳 See full recipe"):
+#                     if meal.ingredients:
+#                         st.markdown("**Ingredients**")
+#                         for ing in meal.ingredients:
+#                             amount = ing.get("amount", "").strip()
+#                             item = ing.get("item", "").strip()
+#                             if amount:
+#                                 st.markdown(f"- {amount} {item}")
+#                             else:
+#                                 st.markdown(f"- {item}")
+#
+#                     if meal.instructions:
+#                         st.markdown("**Step-by-step**")
+#                         for idx, step in enumerate(meal.instructions, start=1):
+#                             st.markdown(f"{idx}. {step}")
+#
+#     st.markdown("</div>", unsafe_allow_html=True)
+#
+#
+# def render_recipes() -> None:
+#     st.markdown('<div class="main-block">', unsafe_allow_html=True)
+#
+#     st.markdown(
+#         """
+#         <div style="padding: 10px 0 4px 0; text-align:left;">
+#             <h2 style="margin: 0; font-size:24px; color:#263a2d;">All recipes</h2>
+#             <div style="font-size:13px; color:#6c7a6e;">
+#                 Browse each meal and see ingredients and step-by-step instructions.
+#             </div>
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
+#
+#     col1, col2 = st.columns([2, 1])
+#     meal_type_filter = col1.selectbox(
+#         "Meal type",
+#         ["All", "Breakfast", "Lunch", "Dinner", "Snack"],
+#     )
+#     tag_filter = col2.selectbox(
+#         "Focus",
+#         ["Any", "anti_inflammatory", "fibroid_friendly", "high_fiber", "iron_rich"],
+#     )
+#
+#     for meal in MEALS:
+#         if meal_type_filter != "All" and meal.meal_type.lower() != meal_type_filter.lower():
+#             continue
+#         if tag_filter != "Any" and tag_filter not in meal.tags:
+#             continue
+#
+#         tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
+#
+#         st.markdown(
+#             f"""
+#             <div class="meal-card">
+#                 <div class="meal-header-line">
+#                     <div class="meal-name">{meal.name}</div>
+#                     <div class="meal-heart">👩‍🍳</div>
+#                 </div>
+#                 <div class="meal-meta">
+#                     {meal.meal_type.title()} · 🌿 Anti-inflammatory: {meal.anti_inflammatory_score}/5
+#                     · 💪 Iron: {meal.iron_support}/5
+#                 </div>
+#                 <div class="meal-tags">
+#                     Tags: {tags_display}
+#                 </div>
+#             </div>
+#             """,
+#             unsafe_allow_html=True,
+#         )
+#
+#         with st.expander("👩‍🍳 See full recipe"):
+#             if meal.ingredients:
+#                 st.markdown("**Ingredients**")
+#                 for ing in meal.ingredients:
+#                     amount = ing.get("amount", "").strip()
+#                     item = ing.get("item", "").strip()
+#                     if amount:
+#                         st.markdown(f"- {amount} {item}")
+#                     else:
+#                         st.markdown(f"- {item}")
+#
+#             if meal.instructions:
+#                 st.markdown("**Step-by-step**")
+#                 for idx, step in enumerate(meal.instructions, start=1):
+#                     st.markdown(f"{idx}. {step}")
+#
+#     st.markdown("</div>", unsafe_allow_html=True)
+#
+#
+# # =========================
+# # ROUTING
+# # =========================
+#
+# if current_tab == "home":
+#     render_home()
+# elif current_tab == "plan":
+#     render_plan()
+# elif current_tab == "recipes":
+#     render_recipes()
+# else:
+#     render_home()
+#
+#
+# # =========================
+# # BOTTOM NAVIGATION
+# # =========================
+#
+# home_class = "nav-item active" if current_tab == "home" else "nav-item"
+# plan_class = "nav-item active" if current_tab == "plan" else "nav-item"
+# recipes_class = "nav-item active" if current_tab == "recipes" else "nav-item"
+#
+# st.markdown(
+#     f"""
+#     <div class="bottom-nav">
+#         <a class="{home_class}" href="?tab=home">
+#             <span class="nav-icon">🏠</span>
+#             <span>Home</span>
+#         </a>
+#         <a class="{plan_class}" href="?tab=plan">
+#             <span class="nav-icon">📅</span>
+#             <span>My Plan</span>
+#         </a>
+#         <a class="{recipes_class}" href="?tab=recipes">
+#             <span class="nav-icon">👩‍🍳</span>
+#             <span>Recipes</span>
+#         </a>
+#     </div>
+#     """,
+#     unsafe_allow_html=True,
+# )
+
+# ===========================================================
 
 #
 # import streamlit as st

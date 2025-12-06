@@ -756,3 +756,324 @@ MEALS: List[Meal] = [
     ),
 
 ]
+
+@dataclass
+class FermentedRecipe:
+    id: str
+    name: str
+    prep_minutes: int
+    min_days: int
+    brine_percent: float | None
+    ingredients: list[str]
+    steps: list[str]
+    notes: str = ""
+
+FERMENTED_RECIPES: list[FermentedRecipe] = [
+    FermentedRecipe(
+        id="ferment_red_cabbage_mango",
+        name="Red cabbage ferment with optional mango",
+        prep_minutes=15,
+        min_days=7,
+        brine_percent=2.0,
+        ingredients=[
+            "1 large red cabbage (about 1.5 kg), finely sliced or shredded",
+            "Sea salt (unrefined, without anti-caking agents)",
+            "Water, only if needed to top up",
+            "1 ripe mango, diced (optional)",
+        ],
+        steps=[
+            "Finely slice or shred the red cabbage and place in a large bowl.",
+            "If using mango, dice it into small pieces and keep aside.",
+            "Weigh the cabbage (plus mango if using) and calculate 2% of that weight in salt.",
+            "Sprinkle the salt over the cabbage and massage firmly with your hands until plenty of liquid is released and the cabbage is sitting in its own brine.",
+            "Gently fold in the mango pieces if using.",
+            "Pack the mixture tightly into a clip-top jar, pressing down so the brine rises above the vegetables.",
+            "Leave 1.5–2 cm headspace at the top and wipe the rim clean.",
+            "If needed, add a little water so everything is fully submerged under brine.",
+            "Close the jar and set it on a plate to catch any overflow.",
+            "Let it ferment at room temperature for at least 7 days, then taste and move to the fridge once it is pleasantly sour."
+        ],
+        notes="Salt is 2% of the total weight of cabbage plus mango."
+    ),
+    FermentedRecipe(
+        id="ferment_celery_sticks",
+        name="Fermented celery sticks",
+        prep_minutes=10,
+        min_days=7,
+        brine_percent=2.0,
+        ingredients=[
+            "Stalk celery (as many stalks as fit into your jar)",
+            "2% brine (20 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Rinse the celery stalks briefly under running water.",
+            "Cut into bite-sized pieces or sticks that fit comfortably in your jar.",
+            "Pack the celery into a clip-top jar.",
+            "Pour over 2% brine until all pieces are completely covered.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Set the jar on a plate and ferment at room temperature for at least 7 days.",
+            "Store in the fridge when the taste is pleasantly tangy and the texture still crisp."
+        ],
+        notes="Great crunchy side for bowls or salads."
+    ),
+    FermentedRecipe(
+        id="ferment_brussels_sprouts",
+        name="Fermented Brussels sprouts",
+        prep_minutes=15,
+        min_days=7,
+        brine_percent=4.0,
+        ingredients=[
+            "Fresh Brussels sprouts",
+            "4% brine (40 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Rinse the sprouts and remove any damaged outer leaves; trim the base if needed.",
+            "Pack the whole sprouts (or halved if large) tightly into a jar.",
+            "Cover with 4% brine until completely submerged.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Place the jar on a plate and let ferment at room temperature for at least 7 days.",
+            "Move to the fridge once they smell pleasantly sour and the bitterness has softened."
+        ],
+        notes="Nice warm with roasted dishes or sliced into salads."
+    ),
+    FermentedRecipe(
+        id="ferment_kohlrabi",
+        name="Fermented kohlrabi cubes",
+        prep_minutes=10,
+        min_days=10,
+        brine_percent=2.0,
+        ingredients=[
+            "Kohlrabi bulbs (any colour), peeled",
+            "2% brine (20 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Peel the kohlrabi and cut into small cubes or sticks.",
+            "Pack the pieces firmly into a jar.",
+            "Pour over 2% brine until everything is fully covered.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Set on a plate and ferment at room temperature for at least 10 days.",
+            "Chill once they taste pleasantly sour and still have some crunch."
+        ],
+        notes="Leaves can also be added for extra nutrients if you have them."
+    ),
+    FermentedRecipe(
+        id="ferment_radishes",
+        name="Fermented radishes",
+        prep_minutes=10,
+        min_days=7,
+        brine_percent=2.0,
+        ingredients=[
+            "1 bunch fresh radishes",
+            "2% brine (20 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Remove the radish tops and rinse the bulbs under running water.",
+            "Leave whole or halve if they are large.",
+            "Pack into a jar and cover fully with 2% brine.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Set on a plate and ferment at room temperature for 7–10 days.",
+            "Transfer to the fridge once the flavour is tangy and the colour has deepened."
+        ],
+        notes="Great sliced on bowls or as a salty snack."
+    ),
+    FermentedRecipe(
+        id="ferment_green_asparagus",
+        name="Fermented green asparagus",
+        prep_minutes=10,
+        min_days=7,
+        brine_percent=2.0,
+        ingredients=[
+            "Fresh green asparagus spears",
+            "2% brine (20 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Rinse the asparagus and trim woody ends.",
+            "Cut to fit the height of your jar and pack the spears upright or in pieces.",
+            "Cover with 2% brine so all asparagus is submerged.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Set the jar on a plate and ferment at room temperature for 7–10 days.",
+            "Chill when the spears are nicely sour yet still firm."
+        ],
+        notes="Lovely as a side to eggs, fish or salads."
+    ),
+    FermentedRecipe(
+        id="ferment_cauliflower",
+        name="Fermented cauliflower florets",
+        prep_minutes=15,
+        min_days=7,
+        brine_percent=2.0,
+        ingredients=[
+            "1 head fresh cauliflower",
+            "2% brine (20 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Remove outer leaves and any tough stem from the cauliflower.",
+            "Cut into bite-sized florets.",
+            "Pack the florets tightly into a jar.",
+            "Pour over 2% brine until everything is submerged.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Place on a plate and ferment at room temperature for 7–10 days.",
+            "Refrigerate once the florets are pleasantly sour and still slightly crunchy."
+        ],
+        notes="Pairs well with hearty stews or roasted dishes."
+    ),
+    FermentedRecipe(
+        id="ferment_pickles",
+        name="Classic sour pickles (cucumbers)",
+        prep_minutes=5,
+        min_days=14,
+        brine_percent=4.0,
+        ingredients=[
+            "About 500 g small pickling cucumbers",
+            "1 onion, sliced",
+            "2 garlic cloves, sliced",
+            "2 bay leaves or other tannin-rich leaves (vine or oak work too)",
+            "4% brine (40 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Optionally soak cucumbers 1–2 hours in ice water to firm them up.",
+            "Scrub the cucumbers clean and trim the blossom ends.",
+            "Layer onion, garlic, bay leaves and cucumbers into a large jar.",
+            "Pour over 4% brine until all vegetables are submerged.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Place on a plate and ferment at room temperature for at least 14 days.",
+            "Move to the fridge when the pickles taste pleasantly sour and still crisp."
+        ],
+        notes="Tannin from bay or other leaves helps keep the cucumbers crunchy."
+    ),
+    FermentedRecipe(
+        id="ferment_paprika",
+        name="Fermented mixed peppers",
+        prep_minutes=5,
+        min_days=7,
+        brine_percent=4.0,
+        ingredients=[
+            "3–4 bell peppers in different colours",
+            "1–2 spring onions, sliced",
+            "1–2 garlic cloves (optional)",
+            "4% brine (40 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Deseed the peppers and cut into strips or chunks.",
+            "Slice the spring onion and optional garlic.",
+            "Pack peppers and aromatics into a jar.",
+            "Cover with 4% brine so everything is completely submerged.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Set on a plate and ferment at room temperature for at least 7 days.",
+            "Chill once the taste is bright, sour and still slightly crunchy."
+        ],
+        notes="You can add dried tomato, garlic or ginger for extra flavour."
+    ),
+    FermentedRecipe(
+        id="ferment_kimchi",
+        name="Simple kimchi (Chinese cabbage ferment)",
+        prep_minutes=15,
+        min_days=5,
+        brine_percent=None,
+        ingredients=[
+            "1 large Chinese cabbage",
+            "2–3 medium carrots, grated or sliced",
+            "Optional: daikon or other radish, spring onions, sliced",
+            "Sea salt for 2–3% salting of the total vegetable weight",
+            "1–2 garlic cloves",
+            "Small piece of fresh ginger",
+            "1 teaspoon honey",
+            "½ teaspoon chilli flakes (or more to taste)",
+            "A splash of fish sauce (or omit for a vegan version)",
+            "A little lime or lemon juice",
+        ],
+        steps=[
+            "Chop the Chinese cabbage into bite-sized pieces and place in a large bowl.",
+            "Grate or slice the carrots and any optional radish and spring onions, then add to the bowl.",
+            "Weigh all vegetables and calculate 2–3% of that weight in salt.",
+            "Sprinkle the salt over the vegetables and massage until plenty of liquid is released and the mix sits in its own brine.",
+            "Blend garlic, ginger, honey, chilli flakes, fish sauce and lime juice into a thick paste.",
+            "Mix the paste thoroughly into the salted vegetables.",
+            "Pack everything tightly into a jar, pressing so that the brine rises above the vegetables.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar; set it on a plate.",
+            "Ferment at room temperature for 5–7 days or until it tastes pleasantly sour and complex.",
+            "Chill before eating so the vegetables crisp up again."
+        ],
+        notes="Salt percentage is based on total vegetable weight; heat level is adjustable."
+    ),
+    FermentedRecipe(
+        id="ferment_pumpkin",
+        name="Fermented pumpkin cubes",
+        prep_minutes=15,
+        min_days=7,
+        brine_percent=2.0,
+        ingredients=[
+            "1 Hokkaido pumpkin (ideally organic, skin on is fine)",
+            "2% brine (20 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Clean the pumpkin, remove seeds and cut into bite-sized cubes.",
+            "Pack the cubes into a jar.",
+            "Cover with 2% brine until the pumpkin is completely submerged.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Set on a plate and ferment at room temperature for 7–10 days.",
+            "Transfer to the fridge once the pumpkin is tangy but still firm."
+        ],
+        notes="Can be flavoured with slices of ginger or pieces of dried tomato."
+    ),
+    FermentedRecipe(
+        id="ferment_chili_peppers",
+        name="Fermented chili peppers",
+        prep_minutes=5,
+        min_days=7,
+        brine_percent=2.0,
+        ingredients=[
+            "Fresh chili peppers or small hot peppers",
+            "2% brine (20 g unrefined salt per 1 L water)",
+        ],
+        steps=[
+            "Rinse the chilies; you can leave stems on if you like.",
+            "Pack the chilies whole into a jar.",
+            "Pour over 2% brine until they are completely submerged.",
+            "Leave 1.5–2 cm headspace, wipe the rim and close the jar.",
+            "Set on a plate and ferment at room temperature for 7–10 days.",
+            "Use as is, or blend with some brine into a hot sauce, then store in the fridge."
+        ],
+        notes="Quite hot; a little goes a long way as a topping or in sauces."
+    ),
+    FermentedRecipe(
+        id="ferment_garlic_honey",
+        name="Garlic fermented in honey",
+        prep_minutes=10,
+        min_days=14,
+        brine_percent=None,
+        ingredients=[
+            "Whole garlic heads or peeled cloves (preferably organic)",
+            "Good quality local honey",
+        ],
+        steps=[
+            "Peel the garlic cloves.",
+            "Place cloves into a clean jar and cover completely with honey.",
+            "Stir so that all cloves are coated and there are no trapped air pockets.",
+            "Leave the jar at room temperature; loosen or open the lid daily at first to release any built-up gases and stir.",
+            "Over time the honey will thin and start to bubble as it ferments.",
+            "After at least 2 weeks you can begin using it; flavour continues to develop over months.",
+        ],
+        notes="Great as a cold remedy or to drizzle over savoury dishes; keep in a cool dark place."
+    ),
+    FermentedRecipe(
+        id="ferment_ginger_honey",
+        name="Ginger (or turmeric) fermented in honey",
+        prep_minutes=10,
+        min_days=14,
+        brine_percent=None,
+        ingredients=[
+            "Fresh ginger roots (and/or fresh turmeric), peeled",
+            "Good quality local honey",
+        ],
+        steps=[
+            "Scrape the skin off the ginger (and turmeric) with a spoon and slice into thin pieces.",
+            "Add the slices to a jar and cover generously with honey.",
+            "Stir well so all pieces are coated and submerged.",
+            "Keep the jar at room temperature, stirring or gently shaking now and then to prevent mould.",
+            "As the honey becomes thinner and starts to bubble, fermentation is active.",
+            "After at least 2 weeks you can spoon out honey and slices for tea, tonics or to eat straight.",
+        ],
+        notes="A warming, soothing ferment that combines the benefits of ginger and honey."
+    ),
+]
