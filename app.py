@@ -151,27 +151,47 @@ st.markdown(
         z-index: 9999;
     }
     .nav-item {
-        flex: 1;
-        border: none;
-        background: transparent;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        font-size: 11px;
-        color: #d8e5db;  /* muted light green */
-        padding: 4px 0;
-        border-radius: 999px;
-        margin: 0 4px;
-    }
+    flex: 1;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    padding: 6px 0;
+    border-radius: 999px;
+    margin: 0 4px;
+    cursor: pointer;
+
+    /* remove link styling */
+    text-decoration: none;
+    color: #e6f0e7 !important;
+}
+
+/* active pill */
+.nav-item.active {
+    background: #e4efe6;  /* soft sage */
+    color: #314a38 !important; /* dark green text */
+    font-weight: 600;
+}
+
+/* ensure icons and text adopt the correct theme */
+.nav-item span {
+    text-decoration: none !important;
+    color: inherit !important;
+}
+
+
+
     .nav-icon {
         font-size: 18px;
         margin-bottom: 1px;
     }
-    .nav-item.active {
-        color: #314a38;          /* dark green text/icons */
-        background: #e4efe6;     /* soft sage pill */
-        font-weight: 600;
-    }
+    # .nav-item.active {
+    #     color: #314a38;          /* dark green text/icons */
+    #     background: #e4efe6;     /* soft sage pill */
+    #     font-weight: 600;
+    # }
 
     @media (max-width: 768px) {
         h1 {
@@ -183,13 +203,7 @@ st.markdown(
     }
     </style>
 
-    <script>
-    function switchTab(tabName) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('tab', tabName);
-      window.location.href = url.toString();
-    }
-    </script>
+ 
     """,
     unsafe_allow_html=True,
 )
@@ -560,28 +574,30 @@ else:
 # BOTTOM NAVIGATION
 # =========================
 
+home_class = "nav-item active" if current_tab == "home" else "nav-item"
+plan_class = "nav-item active" if current_tab == "plan" else "nav-item"
+recipes_class = "nav-item active" if current_tab == "recipes" else "nav-item"
+
 st.markdown(
     f"""
     <div class="bottom-nav">
-        <button class="nav-item {'active' if current_tab == 'home' else ''}"
-                onclick="switchTab('home')">
+        <a class="{home_class}" href="?tab=home">
             <span class="nav-icon">🏠</span>
             <span>Home</span>
-        </button>
-        <button class="nav-item {'active' if current_tab == 'plan' else ''}"
-                onclick="switchTab('plan')">
+        </a>
+        <a class="{plan_class}" href="?tab=plan">
             <span class="nav-icon">📅</span>
             <span>My Plan</span>
-        </button>
-        <button class="nav-item {'active' if current_tab == 'recipes' else ''}"
-                onclick="switchTab('recipes')">
+        </a>
+        <a class="{recipes_class}" href="?tab=recipes">
             <span class="nav-icon">👩‍🍳</span>
             <span>Recipes</span>
-        </button>
+        </a>
     </div>
     """,
     unsafe_allow_html=True,
 )
+
 
 
 #
