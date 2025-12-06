@@ -193,6 +193,33 @@ st.markdown(
         text-decoration: none;
     }
 
+    /* Expander styling – match theme green */
+    [data-testid="stExpander"] > details > summary {
+        background-color: #314a38 !important;   /* same deep green as bottom nav */
+        color: #ffffff !important;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        list-style: none;
+    }
+
+    [data-testid="stExpander"] > details > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    [data-testid="stExpander"] > details > summary svg {
+        stroke: #ffffff !important;
+    }
+
+    [data-testid="stExpander"] > details[open] {
+        border-left: 3px solid #314a38;
+        border-radius: 0 0 8px 8px;
+        margin-bottom: 10px;
+        background-color: #f6fbf8;
+        padding-bottom: 8px;
+    }
+
     @media (max-width: 768px) {
         h1 {
             font-size: 1.6rem !important;
@@ -353,8 +380,12 @@ def render_plan() -> None:
         st.caption(FASTING_CONFIGS[selected_pattern_id].description)
 
         st.subheader("🎯 Focus areas")
-        fibroid_focus = st.checkbox("Support fibroids with fibre & cruciferous veggies", value=True)
-        anemia_risk = st.checkbox("Support iron levels (for heavy periods / low iron)", value=True)
+        fibroid_focus = st.checkbox(
+            "Support fibroids with fibre & cruciferous veggies", value=True
+        )
+        anemia_risk = st.checkbox(
+            "Support iron levels (for heavy periods / low iron)", value=True
+        )
 
         st.subheader("📆 Plan duration")
         days = st.slider("How many days should I plan for?", 7, 30, 30)
@@ -644,8 +675,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-
 
 
 # from datetime import date
