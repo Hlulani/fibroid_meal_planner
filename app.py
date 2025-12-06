@@ -1,11 +1,11 @@
 from datetime import date
 import random
-from typing import List
 
 import streamlit as st
 
 from planner import FASTING_CONFIGS, generate_meal_plan
-from meals import MEALS, FERMENTED_RECIPES
+from meals import MEALS
+from fermented import FERMENTED_RECIPES
 
 
 # =========================
@@ -172,7 +172,6 @@ st.markdown(
         margin-bottom: 1px;
     }
 
-    /* default (inactive) link look */
     a.nav-item,
     a.nav-item:link,
     a.nav-item:visited {
@@ -180,7 +179,6 @@ st.markdown(
         text-decoration: none;
     }
 
-    /* active pill */
     a.nav-item.active,
     a.nav-item.active:link,
     a.nav-item.active:visited {
@@ -567,6 +565,10 @@ def render_recipes() -> None:
         )
 
         for fr in FERMENTED_RECIPES:
+            brine_text = (
+                f" · {fr.brine_percent:.1f}% brine" if fr.brine_percent is not None else ""
+            )
+
             st.markdown(
                 f"""
                 <div class="meal-card">
@@ -575,8 +577,7 @@ def render_recipes() -> None:
                         <div class="meal-heart">🧪</div>
                     </div>
                     <div class="meal-meta">
-                        Ferment · ⏱ At least {fr.min_days} days
-                        {" · " + str(fr.brine_percent) + "% brine" if fr.brine_percent is not None else ""}
+                        Ferment · ⏱ At least {fr.min_days} days{brine_text}
                     </div>
                 </div>
                 """,
@@ -584,25 +585,20 @@ def render_recipes() -> None:
             )
 
             with st.expander("👩‍🍳 See full recipe"):
-                # short description if you want one later
-                if getattr(fr, "notes", None):
-                    st.markdown(fr.notes)
+                if fr.notes:
+                    st.markdown(f"*{fr.notes}*")
 
-                if getattr(fr, "ingredients", None):
+                if fr.ingredients:
                     st.markdown("**Ingredients**")
                     for line in fr.ingredients:
                         st.markdown(f"- {line}")
 
-                if getattr(fr, "steps", None):
+                if fr.steps:
                     st.markdown("**How to make it**")
                     for idx, step in enumerate(fr.steps, start=1):
                         st.markdown(f"{idx}. {step}")
 
-                # Explicit fermentation info line
-                st.markdown(
-                    f"**Fermentation time**: at least {fr.min_days} days."
-                )
-
+                st.markdown(f"**Fermentation time**: at least {fr.min_days} days.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -648,7 +644,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
 
 
 
