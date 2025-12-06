@@ -1,15 +1,14 @@
+from datetime import date
+import random
 
 import streamlit as st
 
-from planner import (
-    FASTING_CONFIGS,
-    generate_meal_plan,
-)
+from planner import FASTING_CONFIGS, generate_meal_plan
 from meals import MEALS
 
 
 # =========================
-# BASE CONFIG
+# PAGE CONFIG
 # =========================
 
 st.set_page_config(
@@ -20,220 +19,743 @@ st.set_page_config(
 )
 
 # =========================
-# GLOBAL CSS (MOBILE FIRST)
+# GLOBAL STATE
+# =========================
+
+if "plan_data" not in st.session_state:
+    st.session_state["plan_data"] = None
+
+# Current tab from URL query
+params = st.query_params
+current_tab = params.get("tab") or "home"  # "home", "plan", "recipes"
+
+
+# =========================
+# GLOBAL CSS + NAV JS
 # =========================
 
 st.markdown(
-    """
+    f"""
     <style>
-    .main-block {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-
-    .meal-card {
-        border-radius: 12px;
-        padding: 0.75rem 0.9rem;
-        margin-bottom: 0.75rem;
-        background: #ffffff10;
-        border: 1px solid #ffffff20;
-    }
-
-    .meal-header {
-        font-weight: 600;
-        margin-bottom: 0.1rem;
-    }
-
-    .meal-meta {
-        font-size: 0.8rem;
-        color: #888;
-        margin-bottom: 0.25rem;
-    }
-
-    .meal-tags {
-        font-size: 0.8rem;
-        color: #aaa;
-    }
-
-    .day-header {
-        margin-top: 1.25rem;
-        margin-bottom: 0.5rem;
-        font-size: 1.05rem;
-        font-weight: 700;
-    }
-
-    [data-testid="stAppViewContainer"] {
+    /* Background + general layout */
+    [data-testid="stAppViewContainer"] {{
+        background: linear-gradient(180deg, #fff6f1 0%, #ffffff 40%);
         padding-top: 0.5rem;
-        padding-bottom: 1.5rem;
-    }
+        padding-bottom: 4rem; /* space for bottom nav */
+    }}
 
-    @media (max-width: 768px) {
-        h1 {
+    .main-block {{
+        max-width: 860px;
+        margin: 0 auto;
+    }}
+
+    /* Hero card */
+    .hero-card {{
+        background: linear-gradient(135deg, #ffd9c2, #ffe8df);
+        padding: 18px 16px;
+        border-radius: 22px;
+        margin: 10px 0 18px 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }}
+    .hero-title {{
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        color: #5b320a;
+    }}
+    .hero-sub {{
+        font-size: 14px;
+        color: #6f4b2a;
+    }}
+
+    /* Category chips */
+    .chip-row {{
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        margin-bottom: 10px;
+    }}
+    .chip {{
+        flex: 0 0 auto;
+        background: #fff4e6;
+        border: 1px solid #ffe3c2;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: #c46f00;
+        white-space: nowrap;
+    }}
+
+    /* Meal cards */
+    .meal-card {{
+        border-radius: 18px;
+        padding: 14px 14px 10px 14px;
+        margin-bottom: 14px;
+        background: #ffffff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }}
+    .meal-header-line {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2px;
+    }}
+    .meal-name {{
+        font-weight: 600;
+        font-size: 15px;
+    }}
+    .meal-heart {{
+        font-size: 14px;
+        color: #ff6b6b;
+    }}
+    .meal-meta {{
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 4px;
+    }}
+    .meal-tags {{
+        font-size: 11px;
+        color: #aaa;
+    }}
+
+    .day-header {{
+        margin-top: 1.1rem;
+        margin-bottom: 0.4rem;
+        font-size: 1.0rem;
+        font-weight: 700;
+    }}
+
+    /* Bottom navigation bar */
+    .bottom-nav {{
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #ffffff;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: space-around;
+        padding: 5px 0 6px 0;
+        z-index: 9999;
+    }}
+    .nav-item {{
+        flex: 1;
+        border: none;
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 11px;
+        color: #999;
+        padding: 4px 0;
+    }}
+    .nav-icon {{
+        font-size: 18px;
+        margin-bottom: 1px;
+    }}
+    .nav-item.active {{
+        color: #ff6b6b;
+        font-weight: 600;
+    }}
+
+    @media (max-width: 768px) {{
+        h1 {{
             font-size: 1.6rem !important;
-        }
-        .day-header {
-            font-size: 1rem;
-        }
-        .meal-header {
-            font-size: 0.95rem;
-        }
-    }
+        }}
+        .hero-title {{
+            font-size: 20px;
+        }}
+    }}
     </style>
+
+    <script>
+    function switchTab(tabName) {{
+      const url = new URL(window.location);
+      url.searchParams.set('tab', tabName);
+      window.location.href = url.toString();
+    }}
+    </script>
     """,
     unsafe_allow_html=True,
 )
 
-# =========================
-# TITLE / INTRO
-# =========================
-
-st.markdown('<div class="main-block">', unsafe_allow_html=True)
-
-st.title("🧡 Fibroid-Friendly Anti-Inflammatory Planner")
-
-st.markdown(
-    """
-This planner creates **anti-inflammatory, fibroid-supporting meal days**
-while respecting your **fasting window**.
-
-> This is not medical advice. Always work with your doctor for diagnosis and treatment.
-"""
-)
 
 # =========================
-# SETTINGS (NO SIDEBAR)
+# PAGE RENDERERS
 # =========================
 
-with st.expander("✨ Personalise My Plan", expanded=True):
-    st.write(
-        "Choose your fasting style and focus areas so I can build a supportive meal plan for you ✨"
+def render_home() -> None:
+    st.markdown('<div class="main-block">', unsafe_allow_html=True)
+
+    # Greeting section
+    st.markdown(
+        """
+        <div style="padding: 10px 0 4px 0; text-align:left;">
+            <div style="font-size:13px; color:#777;">Good to see you 🌿</div>
+            <h2 style="margin: 0; font-size:24px;">What nourishment shall we choose today?</h2>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    col1, col2 = st.columns(2)
-
-    pattern_ids = list(FASTING_CONFIGS.keys())
-    selected_pattern_id = col1.selectbox(
-        "Fasting pattern",
-        options=pattern_ids,
-        format_func=lambda pid: FASTING_CONFIGS[pid].label,
+    # Hero card
+    st.markdown(
+        """
+        <div class="hero-card">
+            <div class="hero-title">Fibroid-friendly, anti-inflammatory meals</div>
+            <div class="hero-sub">
+                Gentle, supportive recipes designed around fasting windows,
+                hormones and digestion.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    eat_window_start_hour = col2.slider(
-        "Eating window start (hour)",
-        min_value=8,
-        max_value=14,
-        value=12,
-        help="Hour of your first meal in the day. For 16:8 with 2 meals, 11–13 works well.",
+    # "Search" bar (visual, placeholder for future)
+    search = st.text_input(
+        "Search recipes",
+        "",
+        placeholder="Search a meal or ingredient (coming soon)…",
+        label_visibility="collapsed",
     )
 
-    st.caption(FASTING_CONFIGS[selected_pattern_id].description)
-
-    fibroid_focus = st.checkbox(
-        "Prioritise fibroid support (fibre, cruciferous, liver support)",
-        value=True,
+    # Category chips
+    st.markdown(
+        """
+        <div style="margin-top:2px; margin-bottom:4px; font-size:13px; color:#555;">
+            Focus for today
+        </div>
+        <div class="chip-row">
+            <div class="chip">Hormone support</div>
+            <div class="chip">Low inflammation</div>
+            <div class="chip">Gut reset</div>
+            <div class="chip">Iron support</div>
+            <div class="chip">Energy boost</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    anemia_risk = st.checkbox(
-        "Prioritise iron-support meals",
-        value=True,
-    )
+    # CTA button
+    if st.button("✨ Build My Meal Plan", use_container_width=True):
+        st.query_params["tab"] = "plan"
+        st.rerun()
 
-    days = st.slider(
-        "Days to plan",
-        min_value=7,
-        max_value=30,
-        value=30,
-    )
+    # Recommendations (sample 2 meals)
+    st.markdown("### Recommended for you today")
 
-    st.markdown(f"Meals in database: **{len(MEALS)}**")
-
-    generate_clicked = st.button("Generate meal plan 🚀", use_container_width=True)
-
-# =========================
-# MAIN CONTENT
-# =========================
-
-if generate_clicked:
-    plan = generate_meal_plan(
-        days=days,
-        fasting_pattern_id=selected_pattern_id,
-        eat_window_start_hour=eat_window_start_hour,
-        fibroid_focus=fibroid_focus,
-        anemia_risk=anemia_risk,
-    )
-
-    st.subheader(f"📅 Your {days}-day plan")
-
-    for day_plan in plan:
-        # Day header
+    sample_meals = random.sample(MEALS, k=min(2, len(MEALS)))
+    for meal in sample_meals:
+        tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
         st.markdown(
-            f'<div class="day-header">📆 {day_plan.day.isoformat()}</div>',
+            f"""
+            <div class="meal-card">
+                <div class="meal-header-line">
+                    <div class="meal-name">{meal.name}</div>
+                    <div class="meal-heart">💛</div>
+                </div>
+                <div class="meal-meta">
+                    {meal.meal_type.title()} · 🌿 Anti-inflammatory score: {meal.anti_inflammatory_score}
+                </div>
+                <div class="meal-tags">
+                    Tags: {tags_display}
+                </div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
-        if not day_plan.meals:
-            st.info("No meals found for this day with the current settings.")
-            continue
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        for slot in day_plan.meals:
-            meal = slot.meal
-            tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
 
-            # Card wrapper
-            st.markdown('<div class="meal-card">', unsafe_allow_html=True)
+def render_plan() -> None:
+    st.markdown('<div class="main-block">', unsafe_allow_html=True)
 
-            # Header line
-            st.markdown(
-                f'<div class="meal-header">{slot.time_str} · '
-                f'{meal.meal_type.title()} · {meal.name}</div>',
-                unsafe_allow_html=True,
-            )
-
-            # Scores line
-            st.markdown(
-                f'<div class="meal-meta">'
-                f'Anti-inflammatory score: {meal.anti_inflammatory_score} · '
-                f'Iron support: {meal.iron_support} · '
-                f'Fibre score: {meal.fiber_score}'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-            # Tags
-            st.markdown(
-                f'<div class="meal-tags">Tags: {tags_display}</div>',
-                unsafe_allow_html=True,
-            )
-
-            # Full recipe in expander
-            if meal.ingredients or meal.instructions:
-                with st.expander("📋 How to make this"):
-                    if meal.ingredients:
-                        st.markdown("**Ingredients**")
-                        for ing in meal.ingredients:
-                            amount = ing.get("amount", "").strip()
-                            item = ing.get("item", "").strip()
-                            if amount:
-                                st.markdown(f"- {amount} {item}")
-                            else:
-                                st.markdown(f"- {item}")
-
-                    if meal.instructions:
-                        st.markdown("**Step-by-step**")
-                        for idx, step in enumerate(meal.instructions, start=1):
-                            st.markdown(f"{idx}. {step}")
-
-            st.markdown("</div>", unsafe_allow_html=True)  # close meal-card
-
-        st.markdown("---")
-
-else:
-    st.info(
-        "Adjust your settings above, then tap **Generate meal plan 🚀**."
+    st.markdown(
+        """
+        <div style="padding: 10px 0 4px 0; text-align:left;">
+            <h2 style="margin: 0; font-size:24px;">Your healing plan</h2>
+            <div style="font-size:13px; color:#777;">
+                Tell me how you like to eat and I’ll build a fibroid-supportive plan for you.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-st.markdown("</div>", unsafe_allow_html=True)  # close main-block
+    with st.expander("✨ Personalise My Plan", expanded=True):
+        st.markdown(
+            "Answer these quickly so I can create meals that support your hormones, "
+            "digestion and inflammation 💛"
+        )
 
+        st.subheader("🕒 Eating style")
+        pattern_ids = list(FASTING_CONFIGS.keys())
+        selected_pattern_id = st.selectbox(
+            "Fasting style",
+            options=pattern_ids,
+            format_func=lambda pid: FASTING_CONFIGS[pid].label,
+        )
+
+        eat_window_start_hour = st.slider(
+            "When do you like your first meal?",
+            min_value=8,
+            max_value=14,
+            value=12,
+        )
+
+        st.caption(FASTING_CONFIGS[selected_pattern_id].description)
+
+        st.subheader("🎯 Focus areas")
+        fibroid_focus = st.checkbox("Support fibroids with fibre & cruciferous veggies", value=True)
+        anemia_risk = st.checkbox("Support iron levels (for heavy periods / low iron)", value=True)
+
+        st.subheader("📆 Plan duration")
+        days = st.slider("How many days should I plan for?", 7, 30, 30)
+
+        if st.button("✨ Generate My Healing Plan", use_container_width=True):
+            plan = generate_meal_plan(
+                days=days,
+                fasting_pattern_id=selected_pattern_id,
+                eat_window_start_hour=eat_window_start_hour,
+                fibroid_focus=fibroid_focus,
+                anemia_risk=anemia_risk,
+            )
+            st.session_state["plan_data"] = plan
+            st.success("New plan created. Scroll down to see it 💚")
+
+    plan = st.session_state.get("plan_data")
+
+    if not plan:
+        st.info("Once you generate a plan, your meals will appear here.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    # Today's plan
+    today = date.today()
+    today_plan = next((p for p in plan if p.day == today), None)
+
+    if today_plan:
+        st.markdown("### 🌞 Today’s meals")
+        if not today_plan.meals:
+            st.write("No meals for today with the current filters.")
+        else:
+            for slot in today_plan.meals:
+                meal = slot.meal
+                tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
+                st.markdown(
+                    f"""
+                    <div class="meal-card">
+                        <div class="meal-header-line">
+                            <div class="meal-name">{slot.time_str} · {meal.name}</div>
+                            <div class="meal-heart">🌿</div>
+                        </div>
+                        <div class="meal-meta">
+                            {meal.meal_type.title()} · 🕑 {slot.time_str} ·
+                            💪 Iron: {meal.iron_support}/5 ·
+                            🌾 Fibre: {meal.fiber_score}/5
+                        </div>
+                        <div class="meal-tags">
+                            Tags: {tags_display}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+    else:
+        st.markdown("### 🌞 Today’s meals")
+        st.write("Your plan doesn’t start today, but you can still view all days below.")
+
+    # Full plan
+    with st.expander("📅 View full plan (all days)"):
+        for day_plan in plan:
+            st.markdown(
+                f'<div class="day-header">📆 {day_plan.day.isoformat()}</div>',
+                unsafe_allow_html=True,
+            )
+            if not day_plan.meals:
+                st.write("No meals for this day.")
+                continue
+
+            for slot in day_plan.meals:
+                meal = slot.meal
+                tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
+
+                st.markdown(
+                    f"""
+                    <div class="meal-card">
+                        <div class="meal-header-line">
+                            <div class="meal-name">{slot.time_str} · {meal.name}</div>
+                            <div class="meal-heart">💚</div>
+                        </div>
+                        <div class="meal-meta">
+                            {meal.meal_type.title()} · 🕑 {slot.time_str} ·
+                            🌿 Anti-inflammatory: {meal.anti_inflammatory_score}/5 ·
+                            💪 Iron: {meal.iron_support}/5 ·
+                            🌾 Fibre: {meal.fiber_score}/5
+                        </div>
+                        <div class="meal-tags">
+                            Tags: {tags_display}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def render_recipes() -> None:
+    st.markdown('<div class="main-block">', unsafe_allow_html=True)
+
+    st.markdown(
+        """
+        <div style="padding: 10px 0 4px 0; text-align:left;">
+            <h2 style="margin: 0; font-size:24px;">All recipes</h2>
+            <div style="font-size:13px; color:#777;">
+                Browse each meal and see ingredients and step-by-step instructions.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col1, col2 = st.columns([2, 1])
+    meal_type_filter = col1.selectbox(
+        "Meal type",
+        ["All", "Breakfast", "Lunch", "Dinner", "Snack"],
+    )
+    tag_filter = col2.selectbox(
+        "Focus",
+        ["Any", "anti_inflammatory", "fibroid_friendly", "high_fiber", "iron_rich"],
+    )
+
+    for meal in MEALS:
+        if meal_type_filter != "All" and meal.meal_type.lower() != meal_type_filter.lower():
+            continue
+        if tag_filter != "Any" and tag_filter not in meal.tags:
+            continue
+
+        tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
+
+        st.markdown(
+            f"""
+            <div class="meal-card">
+                <div class="meal-header-line">
+                    <div class="meal-name">{meal.name}</div>
+                    <div class="meal-heart">👩‍🍳</div>
+                </div>
+                <div class="meal-meta">
+                    {meal.meal_type.title()} · 🌿 Anti-inflammatory: {meal.anti_inflammatory_score}/5
+                    · 💪 Iron: {meal.iron_support}/5
+                </div>
+                <div class="meal-tags">
+                    Tags: {tags_display}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Recipe details
+        with st.expander("👩‍🍳 See full recipe"):
+            if meal.ingredients:
+                st.markdown("**Ingredients**")
+                for ing in meal.ingredients:
+                    amount = ing.get("amount", "").strip()
+                    item = ing.get("item", "").strip()
+                    if amount:
+                        st.markdown(f"- {amount} {item}")
+                    else:
+                        st.markdown(f"- {item}")
+
+            if meal.instructions:
+                st.markdown("**Step-by-step**")
+                for idx, step in enumerate(meal.instructions, start=1):
+                    st.markdown(f"{idx}. {step}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# =========================
+# ROUTING
+# =========================
+
+if current_tab == "home":
+    render_home()
+elif current_tab == "plan":
+    render_plan()
+elif current_tab == "recipes":
+    render_recipes()
+else:
+    render_home()  # fallback
+
+
+# =========================
+# BOTTOM NAVIGATION
+# =========================
+
+st.markdown(
+    f"""
+    <div class="bottom-nav">
+        <button class="nav-item {'active' if current_tab == 'home' else ''}"
+                onclick="switchTab('home')">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </button>
+        <button class="nav-item {'active' if current_tab == 'plan' else ''}"
+                onclick="switchTab('plan')">
+            <span class="nav-icon">📅</span>
+            <span>My Plan</span>
+        </button>
+        <button class="nav-item {'active' if current_tab == 'recipes' else ''}"
+                onclick="switchTab('recipes')">
+            <span class="nav-icon">👩‍🍳</span>
+            <span>Recipes</span>
+        </button>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+#
+# import streamlit as st
+#
+# from planner import (
+#     FASTING_CONFIGS,
+#     generate_meal_plan,
+# )
+# from meals import MEALS
+#
+#
+# # =========================
+# # BASE CONFIG
+# # =========================
+#
+# st.set_page_config(
+#     page_title="Fibroid-Friendly Meal Planner",
+#     page_icon="🧡",
+#     layout="centered",
+#     initial_sidebar_state="collapsed",
+# )
+#
+# # =========================
+# # GLOBAL CSS (MOBILE FIRST)
+# # =========================
+#
+# st.markdown(
+#     """
+#     <style>
+#     .main-block {
+#         max-width: 800px;
+#         margin: 0 auto;
+#     }
+#
+#     .meal-card {
+#         border-radius: 12px;
+#         padding: 0.75rem 0.9rem;
+#         margin-bottom: 0.75rem;
+#         background: #ffffff10;
+#         border: 1px solid #ffffff20;
+#     }
+#
+#     .meal-header {
+#         font-weight: 600;
+#         margin-bottom: 0.1rem;
+#     }
+#
+#     .meal-meta {
+#         font-size: 0.8rem;
+#         color: #888;
+#         margin-bottom: 0.25rem;
+#     }
+#
+#     .meal-tags {
+#         font-size: 0.8rem;
+#         color: #aaa;
+#     }
+#
+#     .day-header {
+#         margin-top: 1.25rem;
+#         margin-bottom: 0.5rem;
+#         font-size: 1.05rem;
+#         font-weight: 700;
+#     }
+#
+#     [data-testid="stAppViewContainer"] {
+#         padding-top: 0.5rem;
+#         padding-bottom: 1.5rem;
+#     }
+#
+#     @media (max-width: 768px) {
+#         h1 {
+#             font-size: 1.6rem !important;
+#         }
+#         .day-header {
+#             font-size: 1rem;
+#         }
+#         .meal-header {
+#             font-size: 0.95rem;
+#         }
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True,
+# )
+#
+# # =========================
+# # TITLE / INTRO
+# # =========================
+#
+# st.markdown('<div class="main-block">', unsafe_allow_html=True)
+#
+# st.title("🧡 Fibroid-Friendly Anti-Inflammatory Planner")
+#
+# st.markdown(
+#     """
+# This planner creates **anti-inflammatory, fibroid-supporting meal days**
+# while respecting your **fasting window**.
+#
+# > This is not medical advice. Always work with your doctor for diagnosis and treatment.
+# """
+# )
+#
+# # =========================
+# # SETTINGS (NO SIDEBAR)
+# # =========================
+#
+# with st.expander("✨ Personalise My Plan", expanded=True):
+#     st.write(
+#         "Choose your fasting style and focus areas so I can build a supportive meal plan for you ✨"
+#     )
+#
+#     col1, col2 = st.columns(2)
+#
+#     pattern_ids = list(FASTING_CONFIGS.keys())
+#     selected_pattern_id = col1.selectbox(
+#         "Fasting pattern",
+#         options=pattern_ids,
+#         format_func=lambda pid: FASTING_CONFIGS[pid].label,
+#     )
+#
+#     eat_window_start_hour = col2.slider(
+#         "Eating window start (hour)",
+#         min_value=8,
+#         max_value=14,
+#         value=12,
+#         help="Hour of your first meal in the day. For 16:8 with 2 meals, 11–13 works well.",
+#     )
+#
+#     st.caption(FASTING_CONFIGS[selected_pattern_id].description)
+#
+#     fibroid_focus = st.checkbox(
+#         "Prioritise fibroid support (fibre, cruciferous, liver support)",
+#         value=True,
+#     )
+#
+#     anemia_risk = st.checkbox(
+#         "Prioritise iron-support meals",
+#         value=True,
+#     )
+#
+#     days = st.slider(
+#         "Days to plan",
+#         min_value=7,
+#         max_value=30,
+#         value=30,
+#     )
+#
+#     st.markdown(f"Meals in database: **{len(MEALS)}**")
+#
+#     generate_clicked = st.button("Generate meal plan 🚀", use_container_width=True)
+#
+# # =========================
+# # MAIN CONTENT
+# # =========================
+#
+# if generate_clicked:
+#     plan = generate_meal_plan(
+#         days=days,
+#         fasting_pattern_id=selected_pattern_id,
+#         eat_window_start_hour=eat_window_start_hour,
+#         fibroid_focus=fibroid_focus,
+#         anemia_risk=anemia_risk,
+#     )
+#
+#     st.subheader(f"📅 Your {days}-day plan")
+#
+#     for day_plan in plan:
+#         # Day header
+#         st.markdown(
+#             f'<div class="day-header">📆 {day_plan.day.isoformat()}</div>',
+#             unsafe_allow_html=True,
+#         )
+#
+#         if not day_plan.meals:
+#             st.info("No meals found for this day with the current settings.")
+#             continue
+#
+#         for slot in day_plan.meals:
+#             meal = slot.meal
+#             tags_display = ", ".join(meal.tags) if meal.tags else "no tags"
+#
+#             # Card wrapper
+#             st.markdown('<div class="meal-card">', unsafe_allow_html=True)
+#
+#             # Header line
+#             st.markdown(
+#                 f'<div class="meal-header">{slot.time_str} · '
+#                 f'{meal.meal_type.title()} · {meal.name}</div>',
+#                 unsafe_allow_html=True,
+#             )
+#
+#             # Scores line
+#             st.markdown(
+#                 f'<div class="meal-meta">'
+#                 f'Anti-inflammatory score: {meal.anti_inflammatory_score} · '
+#                 f'Iron support: {meal.iron_support} · '
+#                 f'Fibre score: {meal.fiber_score}'
+#                 f'</div>',
+#                 unsafe_allow_html=True,
+#             )
+#
+#             # Tags
+#             st.markdown(
+#                 f'<div class="meal-tags">Tags: {tags_display}</div>',
+#                 unsafe_allow_html=True,
+#             )
+#
+#             # Full recipe in expander
+#             if meal.ingredients or meal.instructions:
+#                 with st.expander("📋 How to make this"):
+#                     if meal.ingredients:
+#                         st.markdown("**Ingredients**")
+#                         for ing in meal.ingredients:
+#                             amount = ing.get("amount", "").strip()
+#                             item = ing.get("item", "").strip()
+#                             if amount:
+#                                 st.markdown(f"- {amount} {item}")
+#                             else:
+#                                 st.markdown(f"- {item}")
+#
+#                     if meal.instructions:
+#                         st.markdown("**Step-by-step**")
+#                         for idx, step in enumerate(meal.instructions, start=1):
+#                             st.markdown(f"{idx}. {step}")
+#
+#             st.markdown("</div>", unsafe_allow_html=True)  # close meal-card
+#
+#         st.markdown("---")
+#
+# else:
+#     st.info(
+#         "Adjust your settings above, then tap **Generate meal plan 🚀**."
+#     )
+#
+# st.markdown("</div>", unsafe_allow_html=True)  # close main-block
+#
 
 
 
