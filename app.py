@@ -39,6 +39,32 @@ if current_tab not in {"home", "plan", "recipes"}:
 
 
 # =========================
+# HERO IMAGES (CAROUSEL)
+# =========================
+
+HERO_IMAGES = [
+    {
+        "title": "Healthy organic bowl",
+        "subtitle": "Leafy greens, good fats and fibre-rich veggies.",
+        "url": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80",
+    },
+    {
+        "title": "Rainbow anti-inflammatory plate",
+        "subtitle": "Colourful plants to calm inflammation and support hormones.",
+        "url": "https://images.unsplash.com/photo-1543353071-873f17a7a088?auto=format&fit=crop&w=1200&q=80",
+    },
+    {
+        "title": "Nourishing veggie board",
+        "subtitle": "Cruciferous veg, healthy oils and real food ingredients.",
+        "url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
+    },
+]
+
+if "hero_index" not in st.session_state:
+    st.session_state["hero_index"] = 0
+
+
+# =========================
 # GLOBAL CSS
 # =========================
 
@@ -55,6 +81,47 @@ st.markdown(
     .main-block {
         max-width: 860px;
         margin: 0 auto;
+    }
+
+    /* Hero image card (carousel) */
+    .hero-image-card {
+        background: #f6fbf8;
+        border-radius: 24px;
+        padding: 10px 10px 12px 10px;
+        margin: 4px 0 14px 0;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.10);
+        border: 1px solid #d4e4d8;
+    }
+    .hero-image-card img.hero-image {
+        width: 100%;
+        border-radius: 20px;
+        object-fit: cover;
+        max-height: 260px;
+    }
+    .hero-image-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        gap: 10px;
+    }
+    .hero-image-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #294534;
+        margin-bottom: 2px;
+    }
+    .hero-image-sub {
+        font-size: 13px;
+        color: #6c7a6e;
+    }
+    .hero-image-tag {
+        font-size: 12px;
+        color: #314a38;
+        background: #e4efe6;
+        border-radius: 999px;
+        padding: 4px 10px;
+        white-space: nowrap;
     }
 
     /* Hero card - deep green */
@@ -253,6 +320,39 @@ def render_home() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    # Hero image “carousel”
+    hero_len = len(HERO_IMAGES)
+    hero_idx = st.session_state.get("hero_index", 0) % hero_len
+    hero = HERO_IMAGES[hero_idx]
+
+    st.markdown(
+        f"""
+        <div class="hero-image-card">
+            <img src="{hero['url']}" alt="{hero['title']}" class="hero-image" />
+            <div class="hero-image-meta">
+                <div>
+                    <div class="hero-image-title">{hero['title']}</div>
+                    <div class="hero-image-sub">{hero['subtitle']}</div>
+                </div>
+                <div class="hero-image-tag">🌿 Anti-inflammatory focus</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    def go_prev():
+        st.session_state["hero_index"] = (st.session_state["hero_index"] - 1) % hero_len
+
+    def go_next():
+        st.session_state["hero_index"] = (st.session_state["hero_index"] + 1) % hero_len
+
+    c1, c2, c3 = st.columns([1, 3, 1])
+    with c1:
+        st.button("⟵", key="hero_prev", on_click=go_prev)
+    with c3:
+        st.button("⟶", key="hero_next", on_click=go_next)
 
     # Hero card
     st.markdown(
