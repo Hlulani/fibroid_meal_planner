@@ -1,11 +1,26 @@
 from datetime import date
 import random
+from typing import List
 
 import streamlit as st
 
 from planner import FASTING_CONFIGS, generate_meal_plan
 from meals import MEALS
 from fermented import FERMENTED_RECIPES
+
+# =========================
+# OPTIONAL OLLAMA CLIENT
+# =========================
+
+OLLAMA_AVAILABLE = False
+try:
+    from ollama import Client  # type: ignore
+
+    ollama_client = Client(host="http://localhost:11434")
+    OLLAMA_AVAILABLE = True
+except Exception:
+    ollama_client = None
+    OLLAMA_AVAILABLE = False
 
 
 # =========================
@@ -26,15 +41,19 @@ st.set_page_config(
 
 if "plan_data" not in st.session_state:
     st.session_state["plan_data"] = None
+if "hero_index" not in st.session_state:
+    st.session_state["hero_index"] = 0
+if "ai_recipe" not in st.session_state:
+    st.session_state["ai_recipe"] = None
 
-# Determine current tab from query params (?tab=home|plan|recipes)
+# Determine current tab from query params (?tab=home|plan|recipes|ai)
 raw_tab = st.query_params.get("tab", "home")
 if isinstance(raw_tab, list):
     current_tab = raw_tab[0] if raw_tab else "home"
 else:
     current_tab = raw_tab or "home"
 
-if current_tab not in {"home", "plan", "recipes"}:
+if current_tab not in {"home", "plan", "recipes", "ai"}:
     current_tab = "home"
 
 
@@ -59,9 +78,6 @@ HERO_IMAGES = [
         "url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
     },
 ]
-
-if "hero_index" not in st.session_state:
-    st.session_state["hero_index"] = 0
 
 
 # =========================
@@ -299,6 +315,275 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+
+# =========================
+# AI GENERATION HELPER (OLLAMA + FALLBACK)
+# =========================
+
+AI_SYSTEM_INSTRUCTIONS = """
+You are a professional anti-inflammatory and fibroid-supportive nutritionist.
+You create recipes that:
+- lower inflammation,
+- support hormone balance and liver detox,
+- are gentle on digestion,
+- avoid ultra-processed foods and red/processed meat.
+
+You MUST obey:
+- ingredients to include (preferred),
+- ingredients to avoid (do not use them),
+- selected meal type & vibe.
+
+Output strictly in Markdown:
+
+# Title
+One or two sentence description.
+
+## Ingredients
+- bullet list
+
+## Method
+1. numbered steps
+
+## Notes
+- short bullets about fibre, hormones and anti-inflammatory focus.
+"""
+
+
+def _parse_list(raw: str) -> List[str]:
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+
+def _build_fallback_recipe(
+    meal_type: str,
+    servings: int,
+    focus: List[str],
+    include: str,
+    avoid: str,
+    time_limit: str,
+    style: str,
+) -> str:
+    """Deterministic recipe builder that actually respects include/avoid and smoothie/non-smoothie."""
+    include_items = _parse_list(include)
+    avoid_items = [a.lower() for a in _parse_list(avoid)]
+
+    def is_blocked(name: str) -> bool:
+        lname = name.lower()
+        return any(a in lname for a in avoid_items)
+
+    focus_str = ", ".join(focus) if focus else "fibroid support and low inflammation"
+
+    # Smoothie / drink template
+    if "smoothie" in style.lower() or "drink" in style.lower():
+        main_bits = [x for x in include_items if not is_blocked(x)]
+        if not main_bits:
+            main_bits = ["anti-inflammatory green"]
+        title_core = ", ".join(main_bits[:2]).title()
+        title = f"{title_core} smoothie"
+
+        per_serving = []
+        if not is_blocked("unsweetened almond milk"):
+            per_serving.append("200 ml unsweetened almond milk or filtered water")
+        if not is_blocked("spinach"):
+            per_serving.append("1 small handful fresh spinach or other mild leafy green")
+        if not is_blocked("berries"):
+            per_serving.append("1/2 cup mixed berries (fresh or frozen)")
+        if not is_blocked("ground flax"):
+            per_serving.append("1 tbsp ground flax or chia seeds")
+        if not is_blocked("fresh ginger"):
+            per_serving.append("a small slice of fresh ginger (optional)")
+        if not is_blocked("banana"):
+            per_serving.append("1/2 banana for creaminess (optional)")
+
+        for item in include_items:
+            if not is_blocked(item):
+                pretty = item[0].upper() + item[1:]
+                per_serving.append(f"Extra of your chosen ingredient: {pretty}")
+
+        ingredients_scaled = [f"- x{servings} {line}" for line in per_serving]
+
+        lines: List[str] = []
+        lines.append(f"# {title}")
+        lines.append("")
+        lines.append(
+            f"A creamy, fibroid-supportive smoothie tailored to your choices, focusing on {focus_str}."
+        )
+        lines.append("")
+        lines.append("## Ingredients")
+        lines.extend(ingredients_scaled)
+        lines.append("")
+        lines.append("## Method")
+        lines.append("1. Add all ingredients to a high-speed blender.")
+        lines.append("2. Blend until smooth and creamy, adding more liquid if needed.")
+        lines.append("3. Taste and adjust sweetness with a little extra fruit if desired.")
+        lines.append("4. Serve immediately, or chill in the fridge for up to 24 hours.")
+        lines.append("")
+        lines.append("## Notes")
+        lines.append("- Ground flax or chia adds fibre and gentle hormone support.")
+        lines.append("- Leafy greens support estrogen metabolism and liver detox.")
+        lines.append("- Keep it cold but not iced if your digestion is sensitive.")
+        if include_items:
+            lines.append(f"- You asked to include: {', '.join(include_items)}.")
+        if avoid_items:
+            lines.append(f"- Avoided: {', '.join(avoid_items)} as requested.")
+        return "\n".join(lines)
+
+    # Non-smoothie template (bowls / salads / stews)
+    if "salad" in style.lower():
+        base_name = "fibre-rich hormone support salad"
+    elif "stew" in style.lower():
+        base_name = "slow anti-inflammatory veggie stew"
+    elif "one-pan" in style.lower():
+        base_name = "one-pan anti-inflammatory veggie bowl"
+    else:
+        base_name = "cosy fibroid-friendly bowl"
+
+    title = base_name.title()
+
+    components: List[str] = []
+
+    if not is_blocked("quinoa"):
+        components.append("1 cup cooked quinoa or brown rice per person")
+    if not is_blocked("broccoli"):
+        components.append("1 cup chopped broccoli or other cruciferous veg per person")
+    if not is_blocked("spinach"):
+        components.append("1 big handful spinach / kale per person")
+    if not is_blocked("chickpeas"):
+        components.append("1/2 cup cooked chickpeas, lentils or beans per person")
+    if not is_blocked("olive oil"):
+        components.append("1–2 tbsp extra-virgin olive oil")
+    if not is_blocked("tahini"):
+        components.append("1–2 tbsp tahini or seed butter for the dressing")
+    if not is_blocked("garlic"):
+        components.append("1 small clove garlic, finely grated (optional)")
+    if not is_blocked("lemon"):
+        components.append("Juice of 1/2–1 lemon")
+    if not is_blocked("turmeric"):
+        components.append("1/2 tsp ground turmeric + pinch black pepper")
+
+    for item in include_items:
+        if not is_blocked(item):
+            pretty = item[0].upper() + item[1:]
+            components.append(
+                f"Your chosen ingredient: {pretty}, chopped or prepared as you like"
+            )
+
+    ingredients_scaled = [f"- x{servings} {line}" for line in components]
+
+    lines = [
+        f"# {title}",
+        "",
+        f"A warm, fibroid-supportive bowl that focuses on {focus_str}, "
+        f"with a {style.lower()} feel and ready in {time_limit.lower()}.",
+        "",
+        "## Ingredients",
+    ]
+    lines.extend(ingredients_scaled)
+    lines.append("")
+    lines.append("## Method")
+    lines.append("1. Cook your grain (quinoa / rice) if not already prepared.")
+    lines.append(
+        "2. Lightly steam or sauté the vegetables in a splash of water or a little olive oil until just tender."
+    )
+    lines.append(
+        "3. Warm the chickpeas / lentils and add them to the pan, seasoning with salt, pepper and turmeric."
+    )
+    lines.append(
+        "4. In a small bowl, whisk olive oil, tahini, lemon juice and garlic (if using) into a creamy dressing."
+    )
+    lines.append(
+        "5. Assemble bowls with grains at the bottom, veggies and legumes on top, then drizzle generously with the dressing."
+    )
+    lines.append("6. Taste and adjust acidity, salt and heat to your liking.")
+    lines.append("")
+    lines.append("## Notes")
+    lines.append("- Cruciferous veg and leafy greens support estrogen metabolism.")
+    lines.append("- Beans and whole grains add fibre that helps with hormone balance.")
+    lines.append("- Healthy fats (olive oil, tahini) support nutrient absorption.")
+    if include_items:
+        lines.append(f"- You asked to include: {', '.join(include_items)}.")
+    if avoid_items:
+        lines.append(f"- Ingredients avoided: {', '.join(avoid_items)}.")
+    return "\n".join(lines)
+
+
+def generate_ai_recipe_text(
+    meal_type: str,
+    servings: int,
+    focus: List[str],
+    include: str,
+    avoid: str,
+    time_limit: str,
+    style: str,
+) -> str:
+    """
+    Try to use Ollama (llama3) with strict instructions.
+    If not available or it fails, fall back to deterministic builder.
+    """
+    include_items = _parse_list(include)
+    avoid_items = _parse_list(avoid)
+    focus_str = ", ".join(focus) if focus else "fibroid support and low inflammation"
+
+    user_prompt = f"""
+SYSTEM:
+{AI_SYSTEM_INSTRUCTIONS}
+
+USER:
+Create a {meal_type} recipe for {servings} serving(s).
+
+Focus: {focus_str}.
+Style / vibe: {style}.
+Time limit: {time_limit}.
+
+Preferred ingredients (include if possible): {include or "none specified"}.
+Ingredients to AVOID (must not appear in ingredients list): {avoid or "none specified"}.
+
+The recipe must be:
+- anti-inflammatory,
+- fibroid-friendly (high fibre, cruciferous veg when appropriate, hormone supportive),
+- mostly plant-based (fish/eggs ok, no red or processed meat),
+- realistic to cook at home.
+
+Remember:
+- Absolutely do not use any of the avoid ingredients.
+- Strongly prefer using the included ingredients.
+
+Return only the recipe in Markdown with sections:
+# Title
+Short 1–2 sentence description.
+
+## Ingredients
+- bullet list
+
+## Method
+1. numbered steps
+
+## Notes
+- bullets about why this is supportive for fibroids and low inflammation.
+"""
+
+    if OLLAMA_AVAILABLE:
+        try:
+            resp = ollama_client.generate(
+                model="llama3",
+                prompt=user_prompt,
+            )
+            text = resp.get("response", "") if isinstance(resp, dict) else ""
+            if text.strip():
+                # quick sanity check: if avoid items appear, fall back
+                lowered = text.lower()
+                if any(a.lower() in lowered for a in avoid_items if a):
+                    return _build_fallback_recipe(
+                        meal_type, servings, focus, include, avoid, time_limit, style
+                    )
+                return text
+        except Exception:
+            # fall through to deterministic builder
+            pass
+
+    return _build_fallback_recipe(
+        meal_type, servings, focus, include, avoid, time_limit, style
+    )
 
 
 # =========================
@@ -734,6 +1019,97 @@ def render_recipes() -> None:
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+def render_ai() -> None:
+    """AI-powered recipe studio using Ollama if available, with a strict fallback."""
+    st.markdown('<div class="main-block">', unsafe_allow_html=True)
+
+    st.markdown(
+        """
+        <div style="padding: 10px 0 4px 0; text-align:left;">
+            <h2 style="margin: 0; font-size:24px; color:#263a2d;">AI recipe studio</h2>
+            <div style="font-size:13px; color:#6c7a6e;">
+                Co-create a fibroid-friendly, anti-inflammatory recipe that fits your cravings,
+                ingredients and time.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if not OLLAMA_AVAILABLE:
+        st.info(
+            "Ollama client is not available. Install `ollama` and run `ollama pull llama3` "
+            "to use a local model. I’ll still generate recipes using an internal fallback."
+        )
+
+    with st.form("ai_recipe_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            meal_type = st.selectbox(
+                "Meal type",
+                ["Breakfast", "Lunch", "Dinner", "Snack"],
+                index=1,
+            )
+        with col2:
+            servings = st.slider("Servings", 1, 6, 2)
+
+        focus = st.multiselect(
+            "What should this recipe support?",
+            [
+                "anti-inflammatory",
+                "fibroid support",
+                "hormone balance",
+                "iron support",
+                "gentle on digestion",
+            ],
+            default=["anti-inflammatory", "fibroid support"],
+        )
+
+        col3, col4 = st.columns(2)
+        with col3:
+            time_limit = st.selectbox(
+                "Cooking time",
+                ["Under 15 minutes", "Under 30 minutes", "Up to 45 minutes", "Slow / relaxed"],
+                index=1,
+            )
+        with col4:
+            style = st.selectbox(
+                "Vibe",
+                ["cosy bowl", "light salad", "hearty stew", "one-pan meal", "smoothie / drink"],
+                index=4,
+            )
+
+        include = st.text_area(
+            "Ingredients you’d like to include",
+            placeholder="e.g. berries, spinach, kiwi, ginger…",
+        )
+        avoid = st.text_area(
+            "Ingredients you’d like to avoid",
+            placeholder="e.g. dairy, gluten, mushrooms, onion, broccoli…",
+        )
+
+        submitted = st.form_submit_button("✨ Generate recipe", use_container_width=True)
+
+    if submitted:
+        with st.spinner("Crafting your fibroid-friendly recipe…"):
+            recipe_text = generate_ai_recipe_text(
+                meal_type=meal_type,
+                servings=servings,
+                focus=focus,
+                include=include,
+                avoid=avoid,
+                time_limit=time_limit,
+                style=style,
+            )
+        st.session_state["ai_recipe"] = recipe_text
+
+    if st.session_state.get("ai_recipe"):
+        st.markdown("### Your AI-crafted recipe")
+        st.markdown(st.session_state["ai_recipe"])
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 # =========================
 # ROUTING
 # =========================
@@ -744,6 +1120,8 @@ elif current_tab == "plan":
     render_plan()
 elif current_tab == "recipes":
     render_recipes()
+elif current_tab == "ai":
+    render_ai()
 else:
     render_home()
 
@@ -755,6 +1133,7 @@ else:
 home_class = "nav-item active" if current_tab == "home" else "nav-item"
 plan_class = "nav-item active" if current_tab == "plan" else "nav-item"
 recipes_class = "nav-item active" if current_tab == "recipes" else "nav-item"
+ai_class = "nav-item active" if current_tab == "ai" else "nav-item"
 
 st.markdown(
     f"""
@@ -770,6 +1149,10 @@ st.markdown(
         <a class="{recipes_class}" href="?tab=recipes">
             <span class="nav-icon">👩‍🍳</span>
             <span>Recipes</span>
+        </a>
+        <a class="{ai_class}" href="?tab=ai">
+            <span class="nav-icon">🤖</span>
+            <span>AI Chef</span>
         </a>
     </div>
     """,
