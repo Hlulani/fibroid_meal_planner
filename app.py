@@ -1,3 +1,4 @@
+import os
 from datetime import date
 import random
 from typing import List
@@ -7,6 +8,8 @@ import streamlit as st
 from planner import FASTING_CONFIGS, generate_meal_plan
 from meals import MEALS
 from fermented import FERMENTED_RECIPES
+from ai_engine import generate_recipe_with_ai
+
 
 # =========================
 # OPTIONAL OLLAMA CLIENT
@@ -16,7 +19,10 @@ OLLAMA_AVAILABLE = False
 try:
     from ollama import Client  # type: ignore
 
-    ollama_client = Client(host="http://localhost:11434")
+    # ollama_client = Client(host="http://localhost:11434")
+    ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    ollama_client = Client(host=ollama_host)
+
     OLLAMA_AVAILABLE = True
 except Exception:
     ollama_client = None

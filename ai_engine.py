@@ -1,19 +1,16 @@
-# ai_engine.py
-
 from ollama import Client
 
-# Connect to local Ollama
-client = Client(host="http://localhost:11434")
+client = Client(host="http://127.0.0.1:11434")
 
-def generate_recipe(prompt: str) -> str:
+def generate_recipe_with_ai(prompt: str) -> str:
     """
-    Sends a prompt to the local Llama model and returns the generated text.
+    Sends the recipe prompt to your running local Llama model.
     """
     try:
         response = client.generate(
-            model="llama3",
+            model="llama3:latest",  # match your installed tag
             prompt=prompt,
         )
         return response["response"]
     except Exception as e:
-        return f"⚠️ AI generation failed: {e}"
+        return f"⚠️ AI generation failed — {e}"
