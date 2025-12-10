@@ -8,7 +8,6 @@ import streamlit as st
 from planner import FASTING_CONFIGS, generate_meal_plan
 from meals import MEALS
 from fermented import FERMENTED_RECIPES
-from ai_engine import generate_recipe_with_ai
 
 
 # =========================
