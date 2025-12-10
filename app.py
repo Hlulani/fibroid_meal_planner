@@ -10,6 +10,13 @@ from planner import FASTING_CONFIGS, generate_meal_plan
 from meals import MEALS
 from fermented import FERMENTED_RECIPES
 
+from auth import require_user, get_current_user
+from plan_storage import save_user_plan, load_user_plan
+from db import init_db
+# After imports, before st.set_page_config
+init_db()
+
+
 
 # =========================
 # OPTIONAL OLLAMA CLIENT
@@ -815,6 +822,10 @@ def render_home() -> None:
 
 
 def render_plan() -> None:
+    # ensure user is logged in before showing plan
+    user = require_user()
+    user_id = user["id"]
+
     st.markdown('<div class="main-block">', unsafe_allow_html=True)
 
     st.markdown(
@@ -872,9 +883,20 @@ def render_plan() -> None:
                 anemia_risk=anemia_risk,
             )
             st.session_state["plan_data"] = plan
+
+            # persist plan for this user
+            save_user_plan(user_id, plan)
+
             st.success("New plan created. Scroll down to see it 💚")
 
     plan = st.session_state.get("plan_data")
+
+    if not plan:
+        # Try to load the latest saved plan for this user
+        loaded_plan = load_user_plan(user_id)
+        if loaded_plan:
+            st.session_state["plan_data"] = loaded_plan
+            plan = loaded_plan
 
     if not plan:
         st.info("Once you generate a plan, your meals will appear here.")
